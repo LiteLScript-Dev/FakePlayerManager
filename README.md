@@ -8,7 +8,7 @@ Fake Player Manager - A Fake Player Manager plugin with GUI, also linked with [O
 
 This plugin is a FakePlayer management plugin with GUI interface, supports [FakePlayer](https://github.com/ddf8196/FakePlayer)-0.4.0 or later, also provides [operation-agent plugin](https://www.minebbs.com/) resources/operation-agent.2941/) for easy operation
 
-* Example interface.
+* Example Screen.
 
 ![avatar](./Assests/List_en.png)
 ![avatar](./Assests/Menu_en.png)
@@ -25,9 +25,9 @@ This plugin is a FakePlayer management plugin with GUI interface, supports [Fake
 ## Use - GUI
 |Commands|Description|
 |-|-|
-|fpg |open the default interface|
+|fpg |open the default screen|
 |fpg **h**/**help** |opens the help information screen|
-|fpg **a**/**agent** |opens the Fake Player agent interface (requires the [Operation Agent Plugin](https://www.minebbs.com/resources/operation-agent.2941/) to be installed)|
+|fpg **a**/**agent** |opens the Fake Player agent screen (requires the [Operation Agent Plugin](https://www.minebbs.com/resources/operation-agent.2941/) to be installed)|
 |fpg **m**/**menu** |opens the menu screen|
 |fpg **q**/**quick** |opens the Fake Player online status quick management screen|
 |fpg **list** |opens the Fake Player list screen|
