@@ -2,7 +2,7 @@
 
 假人管理 - 一款带GUI的假人管理插件，同时联动 [操作代理插件](https://www.minebbs.com/resources/operation-agent.2941/) 功能（需要额外下载才能启用相应功能）请配合 [ddf8196](https://github.com/ddf8196) 的 [FakePlayer](https://github.com/ddf8196/FakePlayer) 使用
 
-Chinese | [English](README.md)
+中文 | [English](README.md)
 
 ## 简介
 

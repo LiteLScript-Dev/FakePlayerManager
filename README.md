@@ -2,7 +2,7 @@
 
 Fake Player Manager - A Fake Player Manager plugin with GUI, also linked with [Operation Agent Plugin](https://www.minebbs.com/resources/operation-agent.2941/) function (need to download extra to enable the corresponding function), please use it with [FakePlayer](https://github.com/ddf8196/FakePlayer) of [ddf8196](https://github.com/ddf8196)
 
-[Chinese](README_cn.md) | English
+[中文](README_cn.md) | English
 
 ## Introduction
 
