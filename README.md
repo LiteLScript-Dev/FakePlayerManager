@@ -58,18 +58,18 @@ This plugin is a FakePlayer management plugin with GUI interface, supports [Fake
 
 ## Configuration file (config.json)
 
-```javascript
+```jsonc
 {
-    "configVersion": 1, // config file version, used for different versions of configuration files compatible with updates, do not modify
-    "wsurl": "ws://localhost", // Fake Player client's WebSocket server address, generally do not need to modify
-    "port": 54321, // the Fake Player client's WebSocket server port
-    "allowRemoveAll": false, // whether to allow the removal of all Fake Player commands (to prevent misuse)
-    "defaultGui": "menu", // the default window, i.e. the window without any parameters
-    "language": "zh_CN", // language, currently available: zh_CN, en_US, contributions welcome
-    "permissionLevel": 1, // the minimum permission level allowed by the command, 0 is for all users, 1 is for administrators
-    "debugMode": false, // debug mode
-    "color": true, // global color switch
-    "consoleColor": true // Console color switch
+    "configVersion": 1,         // config file version, used for different versions of configuration files compatible with updates, do not modify
+    "wsurl": "ws://localhost",  // Fake Player client's WebSocket server address, generally do not need to modify
+    "port": 54321,              // the Fake Player client's WebSocket server port
+    "allowRemoveAll": false,    // whether to allow the removal of all Fake Player commands (to prevent misuse)
+    "defaultGui": "menu",       // the default window, i.e. the window without any parameters
+    "language": "zh_CN",        // language, currently available: zh_CN, en_US, contributions welcome
+    "permissionLevel": 1,       // the minimum permission level allowed by the command, 0 is for all users, 1 is for administrators
+    "debugMode": false,         // debug mode
+    "color": true,              // global color switch
+    "consoleColor": true,       // Console color switch
 }
 ```
 

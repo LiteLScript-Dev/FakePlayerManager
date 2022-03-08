@@ -58,7 +58,7 @@
 
 ## 配置文件(config.json)
 
-```javascript
+```jsonc
 {
     "configVersion": 1,         // 配置文件版本，用作不同版本配置文件兼容更新，勿修改
     "wsurl": "ws://localhost",  // 假人客户端的 WebSocket 服务端地址，一般不需要修改
