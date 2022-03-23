@@ -5,6 +5,7 @@
 //LiteXLoader Dev Helper
 /// <reference path="c:\Users\xiaoqch\.vscode\extensions\moxicat.lxldevhelper-0.1.8/Library/JS/Api.js" /> 
 
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 ////////////////////////////////// Global Config /////////////////////////////////
 const lastestOnlineTimePath = `${PluginDir}/lastOnlineTimes.json`;
@@ -1195,7 +1196,9 @@ class FakePlayerManager {
      * 重新连接 WebSocket
      */
     reConnect() {
-        this.controller.reConnect();
+        this.controller.asyncConnect().then(() => {
+            this.refreshData();
+        });
     }
 
     //========= Listener =========
@@ -1279,38 +1282,453 @@ class FakePlayerWebSocketController {
         this.wsc = network.newWebSocket();
         try{
             let res = mc.runcmdEx('opagent version');
-            if (res&&res.success) {
+            if (res && res.success) {
                 agentInstalled = true;
             }
         }catch(e){
             agentInstalled = false;
         }
-        this.wsc.listen("onTextReceived", (msg) => { this.onTextReceived(msg) });
-        this.wsc.listen("onBinaryReceived", (msg) => { this.onBinaryReceived(msg) });
-        this.wsc.listen("onError", (msg) => { this.onError(msg) });
-        this.wsc.listen("onLostConnection", (code) => this.onLostConnection(code));
+        this.wsc.listen("onTextReceived", this.onTextReceived.bind(this));
+        this.wsc.listen("onBinaryReceived", this.onBinaryReceived.bind(this));
+        this.wsc.listen("onError", this.onError.bind(this));
+        this.wsc.listen("onLostConnection", this.onLostConnection.bind(this));
         this.wsAddress = url + ":" + port;
         debug(`FakePlayerWebSocketController: ${this.wsAddress}`);
-        let success = this.wsc.connect(this.wsAddress);
-        if (!success) {
-            trError('ws.error.connect', { code: this.wsc.errorCode() });
+
+        (async () => {
+            await wait(1000);
+            let result = await this.asyncConnect();
+            if(!result) {
+                trError('ws.error.connect', { code: this.wsc.errorCode() });
+            }
+        })().catch(e => {
+            this.ready = false;
+            logger.error(`Error in connecting to ${this.wsAddress}: ${e}`);
+        });
+    }
+
+    /**
+     * 异步连接
+     * @returns {Promise<Boolean>} 是否连接成功
+     */
+    async asyncConnect() {
+        if (this.ready)
+            return true;
+
+        if (this.wsc.connectAsync) {
+            return new Promise((resolve, reject) => {
+                let result = this.wsc.connectAsync(this.wsAddress, (success) => {
+                    this.ready = success;
+                    resolve(success);
+                });
+                if (!result)
+                    reject(new Error(`Fail to connect to ${this.wsAddress}`));
+            });
+        } else {
+            // 假装异步来统一 api
+            return new Promise((resolve, reject) => {
+                let result = this.wsc.connect(this.wsAddress);
+                this.ready = success;
+                resolve(result);
+            });
+        }
+    }
+
+    connectWebsocket(callback = null) {
+        if(this.ready)
+            return;
+        let tmp_callback = (result)=>{
+            this.ready = result;
+            if(callback)
+                callback(result);
+            else if (!result)
+                trError('ws.error.connect', { code: this.wsc.errorCode() });
+        }
+        if(this.wsc.connectAsync){
+            this.wsc.connectAsync(this.wsAddress, tmp_callback);
         }else{
-            this.ready = true;
+            let result = this.wsc.connect(this.wsAddress);
+            tmp_callback(result);
         }
     }
 
     /**
-     * 重新连接 WebSocket
+     * 获取格式化后的回调消息
+     * @param {String} response 回调消息
+     * @returns {String} 格式化后的回调消息
      */
-    reConnect() {
-        let success = this.wsc.connect(this.wsAddress);
-        if (!success) {
-            this.ready = false;
-            trError('ws.error.connect', { code: this.wsc.errorCode() });
+    getResponseStr(response) {
+        return getResponseStr(response);
+    }
+
+    //========= Callback =========
+    /**
+     * 回调控制
+     * @param {Integer} id 回调ID
+     * @param {{type: string, data: any}} msg 回调消息
+     */
+    onCallback(id, msg) {
+        if (this.callbacks.hasOwnProperty(id)) {
+            this.callbacks[id](msg);
+            delete this.callbacks[id];
         } else {
-            this.ready = true;
+            logger.info(Color.transformToConsole(getResponseStr(msg)));
         }
-        return success;
+    }
+
+    //========= Event =========
+    /**
+     * 添加假人客户端 WebSocket 消息监听
+     * @param {String} type 事件类型
+     * @param {Function} callback 回调函数
+     */
+    listen(type, callback) {
+        switch (type) {
+            case "onAdd":
+                this.onAdd = callback
+                break;
+            case "onRemove":
+                this.onRemove = callback
+                break
+            case "onConnect":
+                this.onConnect = callback
+                break;
+            case "onDisonnect":
+                this.onDisonnect = callback
+                break
+            case "onSetChatControl":
+                this.onSetChatControl = callback
+                break
+            default:
+                trError('ws.error.listen.unknown_type')
+        }
+    }
+
+    /**
+     * 假人客户端 WebSocket 事件监听
+     * @param {String} evType 事件类型
+     * @param {Object} evData 事件数据
+     */
+    onEvent(evType, evData) {
+        let fpName = evData.name;
+        switch (evType) {
+            case 'add':
+                if (this.onAdd)
+                    this.onAdd(fpName, evData.state);
+                break;
+            case 'remove':
+                if (this.onRemove)
+                    this.onRemove(fpName);
+                break
+            case 'connect':
+                if (this.onConnect)
+                    this.onConnect(fpName, evData.state);
+                break
+            case 'disconnect':
+                if (this.onDisonnect)
+                    this.onDisonnect(fpName, evData.state);
+                break
+            case 'setChatControl':
+                if (this.onSetChatControl)
+                    this.onSetChatControl();
+                break
+            default:
+                trError('ws.error.event.unknown_type', { type: evType })
+        }
+    }
+
+    //========= OnMessage =========
+    /**
+     * 默认消息处理
+     * @param {String} msg 消息
+     */
+    defaultOnMessage(msg) {
+        logger.info(msg);
+    }
+    /**
+     * WebSocket 文本消息处理
+     * @param {String} str 消息
+     */
+    onTextReceived(str) {
+        let msg = JSON.parse(str);
+        debug(`<<\n${JSON.stringify(msg, null, 4)}`);
+        if (msg.hasOwnProperty('type') && msg.type == "setChatControl") {
+            this.onEvent("setChatControl", { name: msg.data.name });
+        }
+        if (msg.hasOwnProperty('event')) {
+            this.onEvent(msg.event, msg.data);
+        } else if (msg.hasOwnProperty('id')) {
+            this.onCallback(msg.id, msg);
+        } else {
+            this.defaultOnMessage(msg);
+        }
+    }
+
+    /**
+     * WebSocket 二进制消息处理
+     * @param {ByteBuffer} data 二进制消息
+     */
+    onBinaryReceived(data) {
+        trInfo("ws.receive.bin", data.toString())
+    }
+
+    /**
+     * WebSocket 错误处理
+     * @param {String} msg 错误消息
+     */
+    onError(msg) {
+        trError('ws.error.on_error', { msg: msg });
+    }
+
+    /**
+     * WebSocket 连接断开处理
+     * @param {Integer} code 错误代码
+     */
+    onLostConnection(code) {
+        this.ready = false;
+        trError('ws.error.lost_connection', { code: code });
+        this.connectWebsocket();
+    }
+
+    //========= sendMsg =========
+    /**
+     * 生成回调ID
+     * @returns {Integer} 回调ID
+     */
+    genPacketId() {
+        while (true) {
+            let id = system.randomGuid()
+            if (!this.callbacks.hasOwnProperty(id)) return id
+        }
+    }
+    _addCallback(id, callback) {
+        if (callback)
+            this.callbacks[id] = callback
+    }
+    _removeCallback(id) {
+        if (this.callbacks.hasOwnProperty(id))
+            delete this.callbacks[id]
+    }
+
+    async sendAsync(msg) {
+        if (!this.ready) {
+            if(!await this.asyncConnect()){
+                return tr("ws.error.send_msg.connect_failed")
+            }
+        }
+        return new Promise((resolve, reject) => {
+            let id = this.genPacketId();
+            msg.id = id;
+            this._addCallback(id, resolve);
+            let success = this.wsc.send(JSON.stringify(msg));
+            if (!success) {
+                reject(tr('ws.error.send', { code: this.wsc.errorCode() }));
+                this._removeCallback(id);
+                (async ()=>{
+                    await wait(1000);
+                    await this.asyncConnect();
+                })();
+            }
+        });
+    }
+
+    /**
+     * 发送 WebSocket 文本消息
+     * @param {Object} msg 消息
+     * @param {Function} callback 回调函数
+     * @returns {String} 回调错误消息
+     */
+    sendMsg(msg, callback) {
+        (async () => {
+            let res = await this.sendAsync(msg);
+            if (callback)
+                callback(res);
+        })();
+    }
+
+    //========= AllowList =========
+    addAllowList(name) {
+        let res = mc.runcmdEx('allowlist add "' + name + '"')
+        if (!res.success) {
+            logger.info(res.output);
+        }
+    }
+    removeAllowList(name) {
+        let res = mc.runcmdEx('allowlist remove "' + name + '"')
+        if (!res.success) {
+            logger.info(res.output);
+        }
+    }
+    removeAllAllowList() {
+        for (let name in players) {
+            this.removeAllowList(name);
+        }
+    }
+
+    //========= WebSocket Api =========
+    list(callback) {
+        let msg = {
+            type: 'list',
+        }
+        return this.sendMsg(msg, callback);
+    }
+    add(name, callback, allowChatControl = false, skin = "steve") {
+        this.addAllowList(name);
+        let msg = {
+            type: 'add',
+            data: {
+                name: name,
+                skin: skin,
+                allowChatControl: allowChatControl,
+            }
+        }
+        return this.sendMsg(msg, callback);
+    }
+    remove(name, callback) {
+        this.removeAllowList(name);
+        let msg = {
+            type: 'remove',
+            data: {
+                name: name,
+            }
+        }
+        return this.sendMsg(msg, callback);
+    }
+    getState(name, callback) {
+        let msg = {
+            type: 'getState',
+            data: {
+                name: name,
+            }
+        }
+        return this.sendMsg(msg, callback);
+    }
+    getAllState(callback) {
+        let msg = {
+            type: 'getState_all',
+        }
+        return this.sendMsg(msg, callback);
+    }
+    disconnect(name, callback) {
+        let msg = {
+            type: 'disconnect',
+            data: {
+                name: name,
+            }
+        }
+        return this.sendMsg(msg, callback);
+    }
+    connect(name, callback) {
+        let msg = {
+            type: 'connect',
+            data: {
+                name: name,
+            }
+        }
+        return this.sendMsg(msg, callback);
+    }
+    removeAll(callback) {
+        this.removeAllAllowList();
+        let msg = {
+            type: 'remove_all',
+        }
+        return this.sendMsg(msg, callback);
+    }
+    connectAll(callback) {
+        let msg = {
+            type: 'connect_all',
+        }
+        return this.sendMsg(msg, callback);
+    }
+    disconnectAll(callback) {
+        let msg = {
+            type: 'disconnect_all',
+        }
+        return this.sendMsg(msg, callback);
+    }
+    setChatControl(name, allowChatControl, callback) {
+        let msg = {
+            type: 'setChatControl',
+            data: {
+                name: name,
+                allowChatControl: allowChatControl,
+            }
+        }
+        return this.sendMsg(msg, callback);
+    }
+}
+
+
+
+class AsyncFakePlayerWebSocketController {
+    /**
+     * @type {FakePlayerManager} 假人管理器
+     */
+    manager;
+    /**
+     * @type {Map<String,Function>} 回调函数集合
+     */
+    callbacks = {};
+    /**
+     * @type {Boolean} 是否已连接
+     */
+    ready = false;
+
+    /**
+     * FakePlayerWebSocketController
+     * @param {String} url WebSocket地址
+     * @param {Integer} port WebSocket端口
+     */
+    constructor(url, port) {
+        this.wsc = network.newWebSocket();
+        try{
+            let res = mc.runcmdEx('opagent version');
+            if (res && res.success) {
+                agentInstalled = true;
+            }
+        }catch(e){
+            agentInstalled = false;
+        }
+        this.wsc.listen("onTextReceived", this.onTextReceived.bind(this));
+        this.wsc.listen("onBinaryReceived", this.onBinaryReceived.bind(this));
+        this.wsc.listen("onError", this.onError.bind(this));
+        this.wsc.listen("onLostConnection", this.onLostConnection.bind(this));
+        this.wsAddress = url + ":" + port;
+        debug(`FakePlayerWebSocketController: ${this.wsAddress}`);
+        this.asyncConnect().then((result) => {
+            if(!result)
+                trError('ws.error.connect', { code: this.wsc.errorCode() });
+        }).catch(e => {
+            this.ready = false;
+            logger.error(`Error in connecting to ${this.wsAddress}: ${e}`);
+        });
+    }
+
+    /**
+     * 异步连接
+     * @returns {Promise<Boolean>} 是否连接成功
+     */
+    async connectWebsocket() {
+        if (this.ready)
+            return true;
+
+        if (this.wsc.connectAsync) {
+            return new Promise((resolve, reject) => {
+                let result = this.wsc.connectAsync(this.wsAddress, (success) => {
+                    this.ready = success;
+                    resolve(success);
+                });
+                if (!result)
+                    reject(new Error(`Fail to connect to ${this.wsAddress}`));
+            });
+        } else {
+            // 假装异步来统一 api
+            return new Promise((resolve, reject) => {
+                let result = this.wsc.connect(this.wsAddress);
+                this.ready = success;
+                resolve(result);
+            });
+        }
     }
 
     /**
@@ -1448,7 +1866,7 @@ class FakePlayerWebSocketController {
     onLostConnection(code) {
         this.ready = false;
         trError('ws.error.lost_connection', { code: code });
-        this.reConnect();
+        this.connectWebsocket();
     }
 
     //========= sendMsg =========
@@ -1466,37 +1884,36 @@ class FakePlayerWebSocketController {
         if (callback)
             this.callbacks[id] = callback
     }
-    /**
-     * 发送 WebSocket 文本消息
-     * @param {Object} msg 消息
-     * @param {Function} callback 回调函数
-     * @returns {String} 回调错误消息
-     */
-    sendMsg(msg, callback) {
-        // if(this.wsc.status!=this.wsc.Open){
-        //     return "向假人客户端发送消息失败，WebSocket未连接"
-        // }
-        if (!this.ready) {
+    _removeCallback(id) {
+        if (this.callbacks.hasOwnProperty(id))
+            delete this.callbacks[id]
+    }
 
-            let success = this.reConnect();
-            if (!success) {
-                return "";
+    /**
+     * 发送请求
+     * @param {{type: string, id: Integer, data: object}} msg data to send
+     * @returns {Promise<{type: string, data: object}>} 回调消息
+     */
+    async send(msg) {
+        if (!this.ready) {
+            if(!await this.asyncConnect()){
+                return tr("ws.error.send_msg.connect_failed")
             }
         }
-        let id = this.genPacketId();
-        if (callback) msg.id = id;
-        debug(`>>\n${JSON.stringify(msg, null, 4)}`);
-        let success = this.wsc.send(JSON.stringify(msg));
-        if (success) {
-            this._addCallback(id, callback);
-        } else {
-            setTimeout(() => {
-                this.reConnect();
-            }, 1000);
-            let code = this.wsc.errorCode();
-            let error = tr('ws.error.send', { code: code });
-            return error;
-        }
+        return new Promise((resolve, reject) => {
+            let id = this.genPacketId();
+            msg.id = id;
+            this._addCallback(id, resolve);
+            let success = this.wsc.send(JSON.stringify(msg));
+            if (!success) {
+                reject(tr('ws.error.send', { code: this.wsc.errorCode() }));
+                this._removeCallback(id);
+                (async ()=>{
+                    await wait(1000);
+                    await this.asyncConnect();
+                })();
+            }
+        });
     }
 
     //========= AllowList =========
@@ -1519,13 +1936,25 @@ class FakePlayerWebSocketController {
     }
 
     //========= WebSocket Api =========
-    list(callback) {
-        let msg = {
+    /**
+     * 获取假人列表
+     * @returns {Promise<string[]>} 假人列表
+     */
+    async list() {
+        const msg = {
             type: 'list',
         }
-        return this.sendMsg(msg, callback);
+        const { type, data: { list } } = await this.send(msg);
+        return list;
     }
-    add(name, callback, allowChatControl = false, skin = "steve") {
+    /**
+     * 
+     * @param {string} name 假人名称
+     * @param {boolean} allowChatControl 是否允许聊天控制
+     * @param {string} skin 假人皮肤
+     * @returns {Promise<{name: string, success: boolean, resaon: string}>} 返回结果
+     */
+    async add(name, allowChatControl = false, skin = "steve") {
         this.addAllowList(name);
         let msg = {
             type: 'add',
@@ -1535,9 +1964,15 @@ class FakePlayerWebSocketController {
                 allowChatControl: allowChatControl,
             }
         }
-        return this.sendMsg(msg, callback);
+        let { type, data } = await this.send(msg);
+        return data;
     }
-    remove(name, callback) {
+    /**
+     * 移除假人
+     * @param {string} name 假人名称
+     * @returns {Promise<{name: string, success: boolean, resaon: string}>} 返回结果
+     */
+    async remove(name) {
         this.removeAllowList(name);
         let msg = {
             type: 'remove',
@@ -1545,61 +1980,106 @@ class FakePlayerWebSocketController {
                 name: name,
             }
         }
-        return this.sendMsg(msg, callback);
+        const { type, data } = await this.send(msg);
+        return data;
     }
-    getState(name, callback) {
+    /**
+     * 获取假人状态
+     * @param {string} name 假人名称 
+     * @returns {Promise<{name: string, success: boolean, resaon: string, state: STATES}>} 返回结果
+     */
+    async getState(name) {
         let msg = {
             type: 'getState',
             data: {
                 name: name,
             }
         }
-        return this.sendMsg(msg, callback);
+        const { type, data: data } = await this.send(msg);
+        return data;
     }
-    getAllState(callback) {
+    /**
+     * 获取所有假人状态
+     * @returns {Promise<{name: {state: STATES, allowChatControl: boolean}}[]>} 返回结果
+     */
+    async getAllState() {
         let msg = {
             type: 'getState_all',
         }
-        return this.sendMsg(msg, callback);
+        const { type, data: { playersData } } = await this.send(msg);
+        return playersData;
     }
-    disconnect(name, callback) {
+    /**
+     * 断开假人连接
+     * @param {string} name 假人名称
+     * @returns {Promise<{name: string, success: boolean, resaon: string?}>} 返回结果
+     */
+    async disconnect(name) {
         let msg = {
             type: 'disconnect',
             data: {
                 name: name,
             }
         }
-        return this.sendMsg(msg, callback);
+        const { type, data } = await this.send(msg);
+        return data;
     }
-    connect(name, callback) {
+    /**
+     * 连接假人
+     * @param {string} name 假人名称
+     * @returns {Promise<{name: string, success: boolean, resaon: string?}>} 返回结果
+     */
+    async connect(name) {
         let msg = {
             type: 'connect',
             data: {
                 name: name,
             }
         }
-        return this.sendMsg(msg, callback);
+        const { type, data } = await this.send(msg);
+        return data;
     }
-    removeAll(callback) {
+    /**
+     * 移除所有假人
+     * @returns {Promise<{list: string[]}>} 返回结果
+     */
+    async removeAll() {
         this.removeAllAllowList();
         let msg = {
             type: 'remove_all',
         }
-        return this.sendMsg(msg, callback);
+        const { type, data: { list } } = await this.send(msg);
+        return list;
     }
-    connectAll(callback) {
+    /**
+     * 连接所有假人
+     * @returns {Promise<{list: string[]}>} 返回结果
+     */
+    async connectAll() {
         let msg = {
             type: 'connect_all',
         }
-        return this.sendMsg(msg, callback);
+        const { type, data: { list } } = await this.send(msg);
+        return list;
     }
-    disconnectAll(callback) {
+    /**
+     * 断开所有假人连接
+     * @returns {Promise<{list: string[]}>} 返回结果
+     */
+    async disconnectAll() {
         let msg = {
             type: 'disconnect_all',
         }
-        return this.sendMsg(msg, callback);
+        const { type, data: { list } } = await this.send(msg);
+        return list;
     }
-    setChatControl(name, allowChatControl, callback) {
+    /**
+     * 设置假人聊天控制
+     * @param {string} name 假人名称
+     * @param {boolean} allowChatControl 是否允许聊天控制
+     * @returns {Promise<{name: string, success: boolean, resaon: string}>} 返回结果
+     */
+    async setChatControl(name, allowChatControl) {
         let msg = {
             type: 'setChatControl',
             data: {
@@ -1607,7 +2087,8 @@ class FakePlayerWebSocketController {
                 allowChatControl: allowChatControl,
             }
         }
-        return this.sendMsg(msg, callback);
+        const { type, data } = await this.send(msg);
+        return data;
     }
 }
 

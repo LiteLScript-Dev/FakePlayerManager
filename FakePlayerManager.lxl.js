@@ -11,7 +11,7 @@ const PLUGIN_DESCRIPTION_KEY = "plugin.description";
 const GITHUB_URL = "https://github.com/LiteLScript-Dev/FakePlayerManager"
 const CURRENT_CONFIG_VERSION = 1;
 
-const PluginDir = "plugins/FakePlayerManager/";
+const PluginDir = `plugins/${PLUGIN_NAME}/`;
 const LanguageDir = `${PluginDir}Language/`;
 const LangHelperPath = `${PluginDir}LangHelper.js`;
 const FakePlayerControllerPath = `${PluginDir}FakePlayerController.js`;
@@ -40,12 +40,12 @@ const colorMap = {
     "§e": "\x1b[38;2;255;255;085m", //YELLOW
     "§f": "\x1b[38;2;255;255;255m", //WHITE
     "§g": "\x1b[38;2;221;214;005m", //MINECOIN_GOLD
-    // "§": "",                        //ESCAPE
+    // "§": "",                     //ESCAPE
     "§l": "\x1b[1m",                //BOLD
     "§o": "\x1b[3m",                //ITALIC
     "§k": "",                       //OBFUSCATED
     "§r": "\x1b[0m",                //RESET
-    "": "",                       //NULL
+    "": "",                         //NULL
 }
 
 const Color = {
@@ -185,10 +185,6 @@ const Color = {
     },
 };
 
-
-
-
-
 // 全局设置
 var Settings = {
     /**
@@ -276,6 +272,8 @@ conf.close();
 
 debug(`Settings: ${JSON.stringify(Settings)}`);
 
+
+///////////////////////////////////// Global /////////////////////////////////////
 const { LangPack } = require(LangHelperPath);
 
 var Global = {
@@ -293,12 +291,9 @@ var Global = {
     fpc: null,
 };
 
-const FakePlayerController = require(FakePlayerControllerPath);
-// const FakePlayerChatController = FakePlayerController.FakePlayerChatController;
-const FakePlayerWebSocketController = FakePlayerController.FakePlayerWebSocketController;
-const FakePlayerManager = FakePlayerController.FakePlayerManager;
-const FakePlayer = FakePlayerController.FakePlayer;
+const { FakePlayerWebSocketController, FakePlayerManager, FakePlayer} = require(FakePlayerControllerPath);
 
+//////////////////////////////////// Translations ////////////////////////////////////
 // 额外的函数以防止传回来值类型变成Object(未知原因)
 function tr(_key, ..._args) {
     let rtn = Global.langPack.get(...arguments);
@@ -359,16 +354,6 @@ mc.listen("onServerStarted", function () {
         fpc = Global.fpc;
     }, 100);
 });
-
-// let Infomation = {};
-// Infomation[Color.green("Author")] = AUTHOR;
-// Infomation[Color.green("Github")] = GITHUB_URL;
-
-ll.registerPlugin(PLUGIN_NAME, tr(PLUGIN_DESCRIPTION_KEY), VERSION,
-    {
-        "Author": AUTHOR,
-        "Github": GITHUB_URL,
-    });
 
 //////////////////////////////// Command ////////////////////////////////
 let fpm = Global.fpm;
@@ -524,14 +509,15 @@ function handleCmd(args, player = null) {
 mc.regPlayerCmd('fpm', tr('command.fpm.description'), function (player, args) {
     handleCmd(args, player);
 }, Settings.permissionLevel);
+
 mc.regConsoleCmd('fpm', tr('command.fpm.description'), function (args) {
     handleCmd(args);
 });
 
-trInfo('plugin.loaded', `${Color.GREEN}${PLUGIN_NAME}${Color.RESET}`, VERSION_STRING, AUTHOR);
-
+///////////////////////////////////// Test //////////////////////////////////////
 if (Settings.debugMode) {
     logger.warn('Debug mode is on. Please use this mode only for testing.');
+    // 测试所有语言的本地化键名一致
     let langKeys = {};
     file.getFilesList(LanguageDir).forEach(fileName => {
         let content = JSON.parse(file.readFrom(LanguageDir + fileName));
@@ -555,3 +541,13 @@ if (Settings.debugMode) {
         }
     }
 }
+
+//////////////////////////////////// Finished ////////////////////////////////////
+
+ll.registerPlugin(PLUGIN_NAME, tr(PLUGIN_DESCRIPTION_KEY), VERSION,
+    {
+        "Author": AUTHOR,
+        "Github": GITHUB_URL,
+    });
+    
+trInfo('plugin.loaded', `${Color.GREEN}${PLUGIN_NAME}${Color.RESET}`, VERSION_STRING, AUTHOR);
