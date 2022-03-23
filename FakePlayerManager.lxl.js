@@ -2,7 +2,7 @@
 // /\*\*\n     \* (.*)\n     \*/
 // /** $1 */
 
-const VERSION = [1, 1, 0];
+const VERSION = [1, 1, 1];
 const IS_BETA = false;
 const AUTHOR = "xiaoqch";
 const VERSION_STRING = VERSION.join(".") + (IS_BETA ? " Beta" : "");
@@ -17,8 +17,9 @@ const LangHelperPath = `${PluginDir}LangHelper.js`;
 const FakePlayerControllerPath = `${PluginDir}FakePlayerController.js`;
 const _ConfigFile = `${PluginDir}config.json`;
 
-logger.setTitle(PLUGIN_NAME);
+const ENABLE_CHAT_CONTROL = false;
 
+logger.setTitle(PLUGIN_NAME);
 
 // 颜色转换映射表
 const colorMap = {

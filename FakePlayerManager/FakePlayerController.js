@@ -184,15 +184,21 @@ mc.listen("onJoin", function (player) {
     if (tpQuery && tpQuery.hasOwnProperty(player.name)) {
         let pos = tpQuery[player.name];
         player.teleport(pos.x, pos.y, pos.z, pos.dimid);
+        delete tpQuery[player.name];
     }
     if (agentQuery && agentQuery.hasOwnProperty(player.name)) {
         let masterName = agentQuery[player.name];
         let master = mc.getPlayer(masterName);
         if (master) {
             let res = mc.runcmdEx('opagent set "' + player.name + '" "' + masterName + '"');
-            if (res.success) player.tell(tr('form.agent.set.success'));
-            else player.tell(tr('form.agent.set.failed'));
+            if (res.success) {
+                player.tell(tr('form.agent.set.success'));
+            }
+            else {
+                player.tell(Color.red(tr('form.agent.set.failed')));
+            }
         }
+        delete agentQuery[player.name];
     }
     FakePlayerManager.onPlayerJoin(player);
 });
@@ -357,26 +363,50 @@ class FakePlayer {
     /**
      * 设置假人代理
      * @param {String} player 玩家名称
+     * @return {Boolean} 是否成功
      */
     setAgent(player) {
+        debug(`${this.name} set agent ${player}`);
         let res = mc.runcmdEx('opagent set "' + this.name + '" "' + player.name + '"');
-        if (!res.success) {
-            return tr('form.agent.set.failed');
-        } else {
-            player.tell(tr('form.agent.set.success'));
-        }
+        debug(JSON.stringify(res));
+        return res.success;
     }
     /**
      * 取消假人代理
-     * @param {String} player 玩家名称
+     * @return {Boolean} 是否成功
      */
-    cancelAgent(player) {
-        let res = mc.runcmdEx('opagent clear "' + player.name + '"');
-        if (!res.success) {
-            return tr('form.agent.cancel.failed');
-        } else {
-            player.tell(tr('form.agent.cancel.success'));
+    cancelAgent() {
+        let res = mc.runcmdEx('opagent query "' + this.name + '"');
+        debug(JSON.stringify(res));
+        return res.success;
+    }
+    /**
+     * 获取假人代理
+     * @return {String} 代理玩家名称
+     */
+    getAgent() {
+        let res = mc.runcmdEx('opagent list');
+        let agent = null;
+        res.output.split('\n').forEach(line => {
+            // line = "master -> agent"
+            debug(line);
+            let arr = line.split(' -> ');
+            if(arr.length == 2 && arr[0] == this.name){
+                agent = mc.getPlayer(arr[1]);
+            }
+        });
+        return agent;
+    }
+    set agent(player) {
+        debug(`${this.name} set agent ${player}`);
+        if(player){
+            this.setAgent(player);
+        }else{
+            this.cancelAgent();
         }
+    }
+    get agent() {
+        return this.getAgent();
     }
 }
 
@@ -427,6 +457,7 @@ class FakePlayerFormHelper {
         SetAgent: tr('form.op.set_agent'),
         CancelAgent: tr('form.op.cancel_agent'),
         AgentFor: tr('form.op.agent_for'),
+        Control: tr('聊天控制'),
         Unknown: tr('form.op.unknown'),
         Cancel: tr('form.cancel'),
     }
@@ -673,10 +704,6 @@ class FakePlayerFormHelper {
             }
         })
     }
-    /**
-     * 发送
-     */
-    sendControlForm() { }
 
     /**
      * 发送代理设置表单
@@ -712,18 +739,24 @@ class FakePlayerFormHelper {
                 return;
             }
             if (id < ops.length) {
-                let res = mc.runcmdEx('opagent clear "' + player.name + '"');
-                if (res.success) {
-                    this.tell(tr('form.agent.cancel.success'));
-                } else {
-                    this.tell(tr('form.agent.cancel.failed'));
+                switch (ops[id]) {
+                    case this.OPERATIONS.CancelAgent:
+                        if(this.manager.cancelAgent(this.player.name)){
+                            this.tell(tr('form.agent.cancel.success'));
+                        }else{
+                            this.tell(Color.red(tr('form.agent.cancel.fail')));
+                        }
+                        break;
+                    default:
+                        logger.error(this.OPERATIONS.Unknown);
+                        this.tell(Color.red(this.OPERATIONS.Unknown));
                 }
             } else {
-                let res = mc.runcmdEx('opagent set "' + onlineList[id - ops.length] + '" "' + player.name + '"');
-                if (res.success) {
+                let res = this.manager.setAgent(this.player.name, onlineList[id - ops.length]);
+                if (res) {
                     this.tell(tr('form.agent.set.success'));
                 } else {
-                    this.tell(tr('form.agent.set.failed'));
+                    this.tell(Color.red(tr('form.agent.set.failed')));
                 }
             }
         })
@@ -760,8 +793,7 @@ class FakePlayerFormHelper {
      * 发送菜单
      */
     sendMenuForm() {
-        //, FORM_MENU.Control
-        let menus = [FORM_MENU.List, FORM_MENU.Quick, FORM_MENU.Teleport];
+        let menus = [FORM_MENU.List, FORM_MENU.Quick, FORM_MENU.Teleport/*, FORM_MENU.Control*/];
         if (agentInstalled) {
             menus.push(FORM_MENU.Agent);
         }
@@ -818,6 +850,67 @@ class FakePlayerFormHelper {
                 this.tell(error);
             }
         })
+    }
+    CONTROL_MENU = {
+        VERSION : 'version',
+        HELP : 'help',
+        POSITION: 'position',
+        INVENTORY: 'inventory',
+        SELECTED: 'selected',
+        DROP: 'drop',
+        DROP_SLOT: 'drop_slot',
+        DROP_ALL: 'drop_all',
+        SYNC_START: 'sync_start',
+        SYNC_STOP: 'sync_stop',
+    }
+    /**
+     * 发送聊天控制表单
+     */
+    sendControlForm() {
+        let title = tr('form.control.title') + '-' + VERSION_STRING;
+        let content = tr('form.control.content');
+        if(Settings.color)
+            content = `${Color.YELLOW}${content}${Color.RESET}`;
+        let btnsText = Object.values(this.CONTROL_MENU);
+        this.sendListForm(title, content, btnsText, (player, id) => {
+            if (id == null) {
+                if(Settings.debugMode)
+                    this.tell(this.OPERATIONS.Cancel);
+                return;
+            }
+            switch (btnsText[id]) {
+                case this.CONTROL_MENU.HELP:
+                    this.tell(tr('form.control.help'));
+                    break;
+                case this.CONTROL_MENU.POSITION:
+                    this.tell(tr('form.control.position'));
+                    break;
+                case this.CONTROL_MENU.INVENTORY:
+                    this.tell(tr('form.control.inventory'));
+                    break;
+                case this.CONTROL_MENU.SELECTED:
+                    this.tell(tr('form.control.selected'));
+                    break;
+                case this.CONTROL_MENU.DROP:
+                    this.tell(tr('form.control.drop'));
+                    break;
+                case this.CONTROL_MENU.DROP_SLOT:
+                    this.tell(tr('form.control.drop_slot'));
+                    break;
+                case this.CONTROL_MENU.DROP_ALL:
+                    this.tell(tr('form.control.drop_all'));
+                    break;
+                case this.CONTROL_MENU.SYNC_START:
+                    this.tell(tr('form.control.sync_start'));
+                    break;
+                case this.CONTROL_MENU.SYNC_STOP:
+                    this.tell(tr('form.control.sync_stop'));
+                    break;
+                case this.CONTROL_MENU.VERSION:
+                    this.tell(tr('form.control.version'));
+                    break;
+            }
+        });
     }
 }
 
@@ -962,7 +1055,7 @@ class FakePlayerManager {
     /**
      * 获取假人对象
      * @param {String} fpName 假人名称
-     * @returns FakePlayer
+     * @returns {FakePlayer}
      */
     getFakePlayer(fpName) {
         return this.fakePlayers[fpName];
@@ -1058,9 +1151,43 @@ class FakePlayerManager {
                     })
                 })
             })
-
         }
-
+    }
+    /**
+     * 
+     */
+    setAgent(name, agent) {
+        let res = mc.runcmdEx(`opagent set ${name} ${agent}`);
+        debug(JSON.stringify(res));
+        return res.success;
+    }
+    /**
+     * 取消假人代理
+     * @param {String} name 假人名称
+     * @returns {Boolean} 是否成功
+     * @example
+     * let success = fpm.cancelAgent(name);
+     * if (success) {
+     *    console.log(`${name} 取消代理成功`);
+     * } else {
+     *   console.log(`${name} 取消代理失败`);
+     * }
+     */
+    cancelAgent(name) {
+        let res = mc.runcmdEx(`opagent clear ${name}`);
+        debug(JSON.stringify(res));
+        return res.success;
+    }
+    /**
+     * 获取假人代理
+     */
+    getAgent(name) {
+        let res = mc.runcmdEx(`opagent get ${name}`);
+        debug(JSON.stringify(res));
+        if(res.success) {
+            return res.output.split('\n')[1].split(' -> ')[1];
+        }
+        return null;
     }
 
     //========= WS Api =========
@@ -1150,9 +1277,13 @@ class FakePlayerWebSocketController {
      */
     constructor(url, port) {
         this.wsc = network.newWebSocket();
-        let res = mc.runcmdEx('opagent version');
-        if (res.success) {
-            agentInstalled = true;
+        try{
+            let res = mc.runcmdEx('opagent version');
+            if (res&&res.success) {
+                agentInstalled = true;
+            }
+        }catch(e){
+            agentInstalled = false;
         }
         this.wsc.listen("onTextReceived", (msg) => { this.onTextReceived(msg) });
         this.wsc.listen("onBinaryReceived", (msg) => { this.onBinaryReceived(msg) });
@@ -1372,13 +1503,13 @@ class FakePlayerWebSocketController {
     addAllowList(name) {
         let res = mc.runcmdEx('allowlist add "' + name + '"')
         if (!res.success) {
-            logger.info(res.result);
+            logger.info(res.output);
         }
     }
     removeAllowList(name) {
         let res = mc.runcmdEx('allowlist remove "' + name + '"')
         if (!res.success) {
-            logger.info(res.result);
+            logger.info(res.output);
         }
     }
     removeAllAllowList() {
@@ -1480,56 +1611,90 @@ class FakePlayerWebSocketController {
     }
 }
 
+if (ENABLE_CHAT_CONTROL) {
+    /**
+     * @type {Map<String, Function>} 等待接收消息的回调函数
+     */
+    let waitingMsgCallbacks = new Map();
 
-/*
-let listenList = [];
-mc.listen("onChat", function (player, msg) {
-    for (index in listenList) {
-        fpName = listenList[index];
-        if (msg.startsWith(plName)) {
-            fp = mc.getPlayer(fpName);
-            fp.talkAs(player, msg);
-            return false;
+    mc.listen("onChat", function (player, msg) {
+        if (!waitingMsgCallbacks.has(player.name)) {
+            return;
+        }
+        let callback = waitingMsgCallbacks.get(player.name);
+        if (callback(msg)) {
+            waitingMsgCallbacks.delete(player.name);
+        }
+    });
+
+    class FakePlayerChatController {
+        constructor(player, target, quiet = true, permission = 1) {
+            this.player = player;
+            this.target = target;
+            this.quiet = quiet;
+            this.permission = permission;
+            listenList.push(this.name);
+        }
+        get name() {
+            return this.player.name;
+        }
+        get targetName() {
+            return this.target.name;
+        }
+        version() {
+            waitingMsgCallbacks.set(this.name, (msg) => {
+                debug(`${this.name} version: ${msg}`);
+                return true;
+            });
+            this.player.talkTo(this.target, `${this.targetName} version`);
+        }
+        help() {
+            waitingMsgCallbacks.set(this.name, (msg) => {
+                debug(`${this.name} help: ${msg}`);
+                return true;
+            });
+            this.player.talkTo(this.target, `${this.targetName} help`);
+        }
+        getPos() {
+            waitingMsgCallbacks.set(this.name, (msg) => {
+                debug(`${this.name} getPos: ${msg}`);
+                return true;
+            });
+            this.player.talkTo(this.target, `${this.targetName} getPos`);
+        }
+        getInventory() {
+            waitingMsgCallbacks.set(this.name, (msg) => {
+                debug(`${this.name} getInventory: ${msg}`);
+                return true;
+            });
+            this.player.talkTo(this.target, `${this.targetName} getInventory`);
+        }
+        getSelectedSlot() {
+            waitingMsgCallbacks.set(this.name, (msg) => {
+                debug(`${this.name} getSelectedSlot: ${msg}`);
+                return true;
+            });
+            this.player.talkTo(this.target, `${this.targetName} getSelectedSlot`);
+        }
+        selectSlot(slot) {
+            // if(slot>0&&slot<8)
+            this.player.talkTo(this.target, `${this.targetName} selectSlot ${slot}`);
+        }
+        dropSlot() {
+            // if(slot>0&&slot<35)
+            this.player.talkTo(this.target, `${this.targetName} dropSlot`);
+        }
+        dropAll() {
+            this.player.talkTo(this.target, `${this.targetName} dropAll`);
+        }
+        syncWith(syncPlayer = this.player) {
+            this.player.talkTo(this.target, `${this.targetName} sycn start ${syncPlayer.name}`);
+        }
+        stopSync() {
+            this.player.talkTo(this.target, `${this.targetName} sycn stop`);
         }
     }
-})
-
-class FakePlayerChatController {
-    constructor(player, quiet = true, permission = 1) {
-        this.player = player;
-        this.name = player.name;
-        this.quiet = quiet;
-        this.permission = permission;
-        listenList.push(this.name);
-    }
-    help() {
-        this.player.tell(this.name + " help", 1);
-    }
-    getPos() {
-        this.player.tell(this.name + " getPos", 1);
-    }
-    getInventory() {
-        this.player.tell(this.name + " getInventory", 1);
-    }
-    getSelectedSlot() {
-        this.player.tell(this.name + " getSelectedSlot", 1);
-    }
-    selectSlot(slot) {
-        // if(slot>0&&slot<8)
-        this.player.tell(this.name + " selectSlot " + slot, 1);
-    }
-    dropSlot() {
-        // if(slot>0&&slot<35)
-        this.player.tell(this.name + " dropSlot " + slot, 1);
-    }
-    dropAll() {
-        this.player.tell(this.name + " dropAll", 1);
-    }
-    syncWith(syncPlayer) {
-        syncPlayer.talkAs(this.name + " sync", 1);
-    }
 }
-*/
 
 module.exports;
 exports.FakePlayerManager = FakePlayerManager;
