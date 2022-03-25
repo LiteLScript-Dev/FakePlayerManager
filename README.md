@@ -82,5 +82,7 @@ This plugin is a FakePlayer management plugin with GUI interface, supports [Fake
 
 * Welcome to provide suggestions and feedback if you have any questions.
 
+## APIs
+* Since this is an asynchronous api exported using a special method, please refer to [FpmApiTemplate.js](./API/FpmApiTemplate.js) to import the FakePlayerManager APIs
 
 Translated with www.DeepL.com/Translator (free version)

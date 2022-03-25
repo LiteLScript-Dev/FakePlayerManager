@@ -81,3 +81,6 @@
 * 此插件会自动检测 [操作代理插件](https://www.minebbs.com/resources/operation-agent.2941/) 是否已安装，相关功能仅在已安装 操作代理插件 的服务器中可用，如需使用相关功能，请下载并安装 操作代理插件
 
 * 欢迎提供建议，如有问题也请反馈
+
+## APIs
+* 由于是使用特殊方法导出的异步api，请配合或参考 [FpmApiTemplate.js](./API/FpmApiTemplate.js) 来导入假人管理API
