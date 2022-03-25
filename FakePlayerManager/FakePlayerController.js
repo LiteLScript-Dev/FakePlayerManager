@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable no-undef */
 // Controller for FakePlayer Manageer
 // Author xiaoqch
 // Please use this plugin with https://github.com/ddf8196/FakePlayer
@@ -49,39 +51,39 @@ const STATES = {
  * @returns {String} 翻译文本
  */
 function getStateStr(state, color = false) {
-    if(!Settings.color) color = false;
+    if (!Settings.color) color = false;
     // return "§00§11§22§33§44§55§66§77§88§99§aa§bb§cc§dd§ee§ff§gg§hh";
     switch (state) {
         case STATES.Connecting:
-            if(color)
+            if (color)
                 return `§l§e${tr('fp.state.connecting')}§r`;
             return tr('fp.state.connecting');
         case STATES.Connected:
-            if(color)
+            if (color)
                 return `§l§9${tr('fp.state.connected')}§r`;
             return tr('fp.state.connected');
         case STATES.Disconnecting:
-            if(color)
+            if (color)
                 return `§c${tr('fp.state.disconnecting')}§r`;
             return tr('fp.state.disconnecting');
         case STATES.Disconnected:
-            if(color)
+            if (color)
                 return `§l§c${tr('fp.state.disconnected')}§r`;
             return tr('fp.state.disconnected');
         case STATES.Reconnecting:
-            if(color)
+            if (color)
                 return `§l§e${tr('fp.state.reconnecting')}§r`;
             return tr('fp.state.reconnecting');
         case STATES.Stopping:
-            if(color)
+            if (color)
                 return `§c${tr('fp.state.stopping')}§r`;
             return tr('fp.state.stopping');
         case STATES.Stopped:
-            if(color)
+            if (color)
                 return `§l§c${tr('fp.state.stopped')}§r`;
             return tr('fp.state.stopped');
         default:
-            if(color)
+            if (color)
                 return `§k${tr('fp.state.unknown')}§r`;
             return tr('fp.state.unknown');
     }
@@ -108,22 +110,22 @@ function getResponseStr(msg) {
     if (!msg) {
         return tr('ws.response.null');
     }
-    if (!msg.type || !msg.hasOwnProperty('data')) {
+    if (!msg.type || !Object.prototype.hasOwnProperty.call(msg, 'data')) {
         return tr('ws.response.unknown', msg);
     }
     switch (msg.type) {
         case "list":
-            return tr('ws.response.list',Color.gold(msg.data.list.length), msg.data.list.map(name=>Color.green(name)).join(', '));
+            return tr('ws.response.list', Color.gold(msg.data.list.length), msg.data.list.map(name => Color.green(name)).join(', '));
         case "add":
             if (msg.data.success) return tr('ws.response.add', Color.green(msg.data.name));
-            else return Color.red(tr('ws.response.add.failed', msg.data.name, msg.data.reason));
+            else return Color.red(tr('ws.response.add.fail', msg.data.name, msg.data.reason));
         case "remove":
             if (msg.data.success) return tr('ws.response.remove', Color.green(msg.data.name));
-            else return Color.red(tr('ws.response.remove.failed', msg.data.name, msg.data.reason));
+            else return Color.red(tr('ws.response.remove.fail', msg.data.name, msg.data.reason));
         case "getState":
             if (msg.data.success) return tr('ws.response.get_state', Color.green(msg.data.name), getStateStr(msg.data.state, true));
-            else return Color.red(tr('ws.response.get_state.failed', msg.data.name, msg.data.reason));
-        case "getState_all":
+            else return Color.red(tr('ws.response.get_state.fail', msg.data.name, msg.data.reason));
+        case "getState_all": {
             let allStateStr = Color.yellow(tr('ws.response.get_all_state.first'));
             let playersData = msg.data.playersData;
             for (let playerName in playersData) {
@@ -131,23 +133,59 @@ function getResponseStr(msg) {
                 allStateStr += "\n" + tr('ws.response.get_all_state.item', Color.green(playerName), getStateStr(data.state, true), data.allowChatControl);
             }
             return allStateStr;
+        }
         case "disconnect":
             if (msg.data.success) return tr('ws.response.disconnect', Color.green(msg.data.name));
-            else return Color.red(tr('ws.response.disconnect.failed', msg.data.name, msg.data.reason));
+            else return Color.red(tr('ws.response.disconnect.fail', msg.data.name, msg.data.reason));
         case "connect":
             if (msg.data.success) return tr('ws.response.connect', Color.green(msg.data.name));
-            else return Color.red(tr('ws.response.connect.failed', msg.data.name, msg.data.reason));
+            else return Color.red(tr('ws.response.connect.fail', msg.data.name, msg.data.reason));
         case "remove_all":
-            return tr('ws.response.remove_all', msg.data.list.map(name=>Color.green(name)).join(', '));
+            return tr('ws.response.remove_all', msg.data.list.map(name => Color.green(name)).join(', '));
         case "disconnect_all":
-            return tr('ws.response.disconnect_all', msg.data.list.map(name=>Color.green(name)).join(', '));
+            return tr('ws.response.disconnect_all', msg.data.list.map(name => Color.green(name)).join(', '));
         case "connect_all":
-            return tr('ws.response.connect_all', msg.data.list.map(name=>Color.green(name)).join(', '));
+            return tr('ws.response.connect_all', msg.data.list.map(name => Color.green(name)).join(', '));
         case "setChatControl":
             if (msg.data.success) return tr('ws.response.set_chat_control', Color.green(msg.data.name));
-            else return Color.red(tr('ws.response.set_chat_control.failed', msg.data.name, msg.data.reason));
+            else return Color.red(tr('ws.response.set_chat_control.fail', msg.data.name, msg.data.reason));
         default:
-            return Color.red(tr('ws.response.unknown', msg));
+            // if(Settings.debugMode) throw new Error(`Unknown type: ${msg.type}`);
+            return Color.red(tr('ws.response.unknown', JSON.stringify(msg)));
+    }
+}
+
+/**
+ * 
+ * @param {string} type 数据类型
+ * @param {object|any[]} data 根据数据类型而定
+ */
+function getResDataStr(type, data) {
+    switch (type) {
+        case "list":
+            return getResponseStr({ type: "list", data: { list: data } });
+        case "add":
+            return getResponseStr({ type: "add", data: data });
+        case "remove":
+            return getResponseStr({ type: "remove", data: data });
+        case "getState":
+            return getResponseStr({ type: "getState", data: data });
+        case "getState_all":
+            return getResponseStr({ type: "getState_all", data: { playersData: data } });
+        case "disconnect":
+            return getResponseStr({ type: "disconnect", data: data });
+        case "connect":
+            return getResponseStr({ type: "connect", data: data });
+        case "remove_all":
+            return getResponseStr({ type: "remove_all", data: { list: data } });
+        case "disconnect_all":
+            return getResponseStr({ type: "disconnect_all", data: { list: data } });
+        case "connect_all":
+            return getResponseStr({ type: "connect_all", data: { list: data } });
+        case "setChatControl":
+            return getResponseStr({ type: "setChatControl", data: data });
+        default:
+            return getResponseStr({ type: "unknown", data: data });
     }
 }
 
@@ -182,12 +220,12 @@ function addAgentQuery(masterName, agentName) {
 }
 
 mc.listen("onJoin", function (player) {
-    if (tpQuery && tpQuery.hasOwnProperty(player.name)) {
+    if (tpQuery && Object.prototype.hasOwnProperty.call(tpQuery, player.name)) {
         let pos = tpQuery[player.name];
         player.teleport(pos.x, pos.y, pos.z, pos.dimid);
         delete tpQuery[player.name];
     }
-    if (agentQuery && agentQuery.hasOwnProperty(player.name)) {
+    if (agentQuery && Object.prototype.hasOwnProperty.call(agentQuery, player.name)) {
         let masterName = agentQuery[player.name];
         let master = mc.getPlayer(masterName);
         if (master) {
@@ -196,7 +234,7 @@ mc.listen("onJoin", function (player) {
                 player.tell(tr('form.agent.set.success'));
             }
             else {
-                player.tell(Color.red(tr('form.agent.set.failed')));
+                player.tell(Color.red(tr('form.agent.set.fail')));
             }
         }
         delete agentQuery[player.name];
@@ -210,24 +248,42 @@ mc.listen("onLeft", function (player) {
 
 
 class FakePlayerGroup {
+    /** @type {string} 分组名 */
+    name = '';
+    /** @type {FakePlayer[]} 假人列表 */
+    fakePlayers = [];
     /**
      * 创建假人组
-     * @param {String} name 名称
-     * @param {Array<FakePlayer>}} fakePlayers 假人列表
+     * @param {string} name 名称
+     * @param {FakePlayer[]} fakePlayers 假人列表
      */
     constructor(name, fakePlayers) {
         this.name = name;
         this.fakePlayers = fakePlayers;
     }
-    connect() {
-        this.fakePlayers.forEach(fakePlayer => {
-            fakePlayer.connect();
-        });
+    /**
+     * 连接分组
+     * @returns {success:boolean, list:{name:string, success:boolean, reason:string}[]} 连接结果
+     */
+    async connect() {
+        let resulltList = [];
+        for (let fakePlayer of this.fakePlayers) {
+            let res = await fakePlayer.connect();
+            resulltList.push(res);
+        }
+        return { success: resulltList.length === this.fakePlayers.length, list: resulltList };
     }
-    disconnect() {
-        this.fakePlayers.forEach(fakePlayer => {
-            fakePlayer.disconnect();
-        });
+    /**
+     * 断开分组
+     * @returns {success:boolean, list:{name:string, success:boolean, reason:string}[]} 断开结果
+     */
+    async disconnect() {
+        let resulltList = [];
+        for (let fakePlayer of this.fakePlayers) {
+            let res = await fakePlayer.disconnect();
+            resulltList.push(res);
+        }
+        return { success: resulltList.length === this.fakePlayers.length, list: resulltList };
     }
 }
 
@@ -286,6 +342,7 @@ class FakePlayer {
     get xuid() {
         if (this.player)
             return this.player.xuid;
+        return '';
     }
     /**
      * @type {String} 假人状态格式化字符串
@@ -293,73 +350,65 @@ class FakePlayer {
     get stateStr() {
         return getStateStr(this.state);
     }
-    get stateStrWithColor(){
+    get stateStrWithColor() {
         return getStateStr(this.state, true);
     }
 
     /**
      * 连接假人
-     * @param {Function} callback 回调函数
-     * @returns {Boolean} 是否成功
+     * @returns {Promise<{name:string, success:boolean, reason:string}>} 连接结果
      */
-    connect(callback) {
-        return this.controller.connect(this.name, callback);
+    async connect() {
+        return await this.controller.connect(this.name);
     }
-    connectGroup(callback) {
-        if (this.ownerGroup) {
-            this.ownerGroup.connect();
-            if (callback) callback(true);
-            return true;
-        }
-        return false;
+    /**
+     * 连接假人组
+     * @returns {Promise<string[]>} 连接成功的假人列表
+     */
+    async connectGroup() {
+        return this.ownerGroup.connect();
     }
     /**
      * 断开假人连接
-     * @param {Function} callback 回调函数
-     * @returns {Boolean} 是否成功
+     * @returns {Promise<{name:string, success:boolean, reason:string}>} 断开结果
      */
-    disconnect(callback) {
-        return this.controller.disconnect(this.name, callback);
+    async disconnect() {
+        return this.controller.disconnect(this.name);
     }
     /**
      * 移除假人
-     * @param {Function} callback 回调函数
-     * @returns {Boolean} 是否成功
+     * @returns {Promise<{name:string, success:boolean, reason:string}>} 移除结果
      */
-    remove(callback) {
-        return this.controller.remove(this.name, callback);
+    async remove() {
+        return this.controller.remove(this.name);
     }
     /**
      * 设置假人聊天控制
-     * @param {Function} callback 回调函数
-     * @returns {Boolean} 是否成功
+     * @returns {Promise<{name:string, success:boolean, reason:string}>} 设置结果
      */
-    setChatControl(allowChatControl, callback) {
-        return this.controller.setChatControl(this.name, allowChatControl, callback);
+    async setChatControl(allowChatControl) {
+        return this.controller.setChatControl(this.name, allowChatControl);
     }
     /**
      * 启用假人聊天控制
-     * @param {Function} callback 回调函数
-     * @returns {Boolean} 是否成功
+     * @returns {Promise<{name:string, success:boolean, reason:string}>} 设置结果
      */
-    trunOnControl(callback) {
-        return this.controller.setChatControl(this.name, true, callback);
+    async trunOnControl() {
+        return this.setChatControl(true);
     }
     /**
      * 禁用假人聊天控制
-     * @param {Function} callback 回调函数
-     * @returns {Boolean} 是否成功
+     * @returns {Promise<{name:string, success:boolean, reason:string}>} 设置结果
      */
-    trunOffControl(callback) {
-        return this.controller.setChatControl(this.name, false, callback);
+    async trunOffControl() {
+        return this.setChatControl(false);
     }
     /**
      * 添加假人
-     * @param {Function} callback 回调函数
-     * @returns {Boolean} 是否成功
+     * @returns {Promise<{name:string, success:boolean, reason:string}>} 添加结果
      */
-    add(callback) {
-        return this.controller.add(this.name, callback, this.allowChatControl, this.skin);
+    async add() {
+        return this.controller.add(this.name, this.allowChatControl, this.skin);
     }
     /**
      * 设置假人代理
@@ -367,42 +416,36 @@ class FakePlayer {
      * @return {Boolean} 是否成功
      */
     setAgent(player) {
-        debug(`${this.name} set agent ${player}`);
-        let res = mc.runcmdEx('opagent set "' + this.name + '" "' + player.name + '"');
-        debug(JSON.stringify(res));
-        return res.success;
+        return this.controller.manager.setAgent(this.name, player);
     }
     /**
      * 取消假人代理
      * @return {Boolean} 是否成功
      */
     cancelAgent() {
-        let res = mc.runcmdEx('opagent query "' + this.name + '"');
-        debug(JSON.stringify(res));
-        return res.success;
+        let agent = this.getAgent();
+        if (agent) {
+            return this.controller.manager.cancelAgent(agent);
+        }
+        return false;
     }
     /**
      * 获取假人代理
      * @return {String} 代理玩家名称
      */
     getAgent() {
-        let res = mc.runcmdEx('opagent list');
-        let agent = null;
-        res.output.split('\n').forEach(line => {
-            // line = "master -> agent"
-            debug(line);
-            let arr = line.split(' -> ');
-            if(arr.length == 2 && arr[0] == this.name){
-                agent = mc.getPlayer(arr[1]);
+        for (let { agent, target } of this.controller.manager.listAgent()) {
+            if (target === this.name) {
+                return agent;
             }
-        });
-        return agent;
+        }
+        return null;
     }
     set agent(player) {
-        debug(`${this.name} set agent ${player}`);
-        if(player){
+        if (Settings.debugMode) debug(`${this.name} set agent ${player}`);
+        if (player) {
             this.setAgent(player);
-        }else{
+        } else {
             this.cancelAgent();
         }
     }
@@ -438,8 +481,43 @@ class FakePlayerFormHelper {
         if (this.player) {
             this.player.tell(msg);
         } else {
-            logger.error("Error to Tell " + this.name + ' "' + msg + '"');
+            logger.error(`Error to tell ${this.name} ${msg}, player not found`);
         }
+    }
+
+    /**
+     * 异步发送表单
+     * @param {SimpleForm|CustomForm} form 表单
+     * @returns {Promise<{player:Player,id:Integer?,data:Array<any>?}>} 表单结果
+     * @example
+     * let form = new SimpleForm();
+     * form.addButton("按钮1", "按钮1的描述");
+     * form.addButton("按钮2", "按钮2的描述");
+     * const {player,id} = await this.sendForm(form);
+     */
+    async sendForm(form) {
+        return new Promise((resolve, reject) => {
+            if (this.player) {
+                let res = this.player.sendForm(form, (player, dataOrId) => {
+                    // 输出 dataOrId 的实例类型
+                    if (Settings.debugMode) debug(form.constructor.name);
+                    if (form instanceof LXL_SimpleForm) {
+                        if (Settings.debugMode) debug(`${this.name} send form ${form.constructor.name} id: ${dataOrId}`);
+                        resolve({ player, id: dataOrId });
+                    } else {
+                        if (Settings.debugMode) debug(`${this.name} send form ${form.constructor.name} data: ${dataOrId}`);
+                        resolve({ player, data: dataOrId });
+                    }
+                });
+                if (!res) {
+                    logger.error(`Error to send form ${form.constructor.name} to ${this.name}`);
+                    reject(new Error('sendForm failed'));
+                }
+            } else {
+                logger.error(`Error to send form ${form.constructor.name} to ${this.name}, player not found`);
+                reject(new Error(`Error to Send Form ${this.name}`));
+            }
+        });
     }
 
     /**
@@ -458,7 +536,7 @@ class FakePlayerFormHelper {
         SetAgent: tr('form.op.set_agent'),
         CancelAgent: tr('form.op.cancel_agent'),
         AgentFor: tr('form.op.agent_for'),
-        Control: tr('聊天控制'),
+        // Control: tr('form.op.control'),
         Unknown: tr('form.op.unknown'),
         Cancel: tr('form.cancel'),
     }
@@ -467,26 +545,26 @@ class FakePlayerFormHelper {
      * @param {String} title 标题
      * @param {String} content 内容
      * @param {Array<String>} btnsText 按钮文本
-     * @param {Function<Integer>} callback 回调函数
-     * @returns {Boolean} 是否成功
+     * @returns {Promise<{player:Player,id:Integer?,data:Array<any>?}>} 表单结果
      */
-    sendListForm(title, content, btnsText, callback) {
+    async sendListForm(title, content, btnsText) {
         let listForm = mc.newSimpleForm();
         if (title) listForm.setTitle(title);
         if (content) listForm.setContent(content);
         btnsText.forEach(text => {
             listForm.addButton(text);
         });
-        return this.player.sendForm(listForm, callback);
+        return this.sendForm(listForm);
     }
 
     /**
      * 发送假人列表表单
+     * @returns {Promise<{player:Player,id:Integer?,data:Array<any>?}>} 表单结果
      */
-    sendFPListForm() {
+    async sendFPListForm() {
         let title = tr('form.list.title') + '-' + VERSION_STRING;
         let content = isNewFPVersion ? tr('form.list.content') : tr('form.list.content.old');
-        if(Settings.color)
+        if (Settings.color)
             content = Color.yellow(content);
         let fpNames = this.manager.getNameList();
         let additionalOps = [this.OPERATIONS.Add, this.OPERATIONS.ConnectAll, this.OPERATIONS.DisconnectAll];
@@ -497,7 +575,7 @@ class FakePlayerFormHelper {
         fpNames.forEach(fpName => {
             let fp = this.manager.getFakePlayer(fpName);
             let stateStr = fp.stateStr;
-            if(Settings.color){
+            if (Settings.color) {
                 switch (fp.state) {
                     case STATES.Connected:
                         stateStr = `${Color.DARK_GREEN}${stateStr}${Color.RESET}`;
@@ -519,46 +597,47 @@ class FakePlayerFormHelper {
             fpText.push(str);
         })
         let btnsText = fpText.concat(additionalOps.map(op => `${Color.DARK_BLUE}${Color.BOLD}${op}${Color.RESET}`));
-        this.sendListForm(title, content, btnsText, (player, id) => {
-            if (id == null) {
-                if(Settings.debugMode)
-                    this.tell(this.OPERATIONS.Cancel);
-                return;
+        const { id } = await this.sendListForm(title, content, btnsText);
+
+        if (id == null) {
+            if (Settings.debugMode)
+                this.tell(this.OPERATIONS.Cancel);
+            return;
+        }
+        if (Settings.debugMode) debug(`${this.name} send list form, operation: ${btnsText[id]}`);
+        if (id < fpNames.length) {
+            await this.sendOperateForm(fpNames[id]);
+        } else {
+            let data;
+            switch (additionalOps[id - fpNames.length]) {
+                case this.OPERATIONS.Add:
+                    await this.sendAddForm();
+                    break;
+                case this.OPERATIONS.ConnectAll:
+                    data = await this.controller.connectAll();
+                    this.tell(getResponseStr({ type: "connect_all", data: { list: data } }));
+                    break;
+                case this.OPERATIONS.DisconnectAll:
+                    data = await this.controller.disconnectAll();
+                    this.tell(getResponseStr({ type: "disconnect_all", data: { list: data } }));
+                    break;
+                case this.OPERATIONS.RemoveAll:
+                    data = await this.controller.removeAll();
+                    this.tell(getResponseStr({ type: "remove_all", data: { list: data } }));
+                    break;
+                default:
+                    logger.error(this.OPERATIONS.Unknown);
+                    this.tell(this.OPERATIONS.Unknown);
+                    if (Settings.debugMode) throw new Error(this.OPERATIONS.Unknown);
+                    break;
             }
-            if (id < fpNames.length) {
-                let fpName = fpNames[id];
-                this.sendOperateForm(fpName);
-            } else {
-                let error;
-                switch (btnsText[id]) {
-                    case this.OPERATIONS.Add:
-                        this.sendAddForm();
-                        break;
-                    case this.OPERATIONS.ConnectAll:
-                        error = this.controller.connectAll(msg => this.tell(getResponseStr(msg)));
-                        break;
-                    case this.OPERATIONS.DisconnectAll:
-                        error = this.controller.disconnectAll(msg => this.tell(getResponseStr(msg)));
-                        break;
-                    case this.OPERATIONS.RemoveAll:
-                        error = this.controller.removeAll(msg => this.tell(getResponseStr(msg)));
-                        break;
-                    default:
-                        logger.error(this.OPERATIONS.Unknown);
-                        this.tell(this.OPERATIONS.Unknown);
-                }
-                if (error) {
-                    // this.tell(tr('ws.error.tip'));
-                    this.tell(error);
-                }
-            }
-        })
+        }
     }
     /**
      * 发送操作表单
      * @param {String} fpName 假人名称
      */
-    sendOperateForm(fpName) {
+    async sendOperateForm(fpName) {
         let opForm = mc.newSimpleForm();
         opForm.setTitle(tr('form.op.title'));
         let fp = this.manager.getFakePlayer(fpName);
@@ -567,7 +646,7 @@ class FakePlayerFormHelper {
             content += ' - ';
             content += fp.allowChatControl ? tr('form.control.on') : tr('form.control.off');
         }
-        if(Settings.color)
+        if (Settings.color)
             content = `${Color.YELLOW}${content}${Color.RESET}`;
         opForm.setContent(content);
 
@@ -591,52 +670,58 @@ class FakePlayerFormHelper {
             ops.push(this.OPERATIONS.TrunOffControl);
         }
         ops = ops.concat([this.OPERATIONS.Remove]);
-        if (agentInstalled) {
+        if (agentInstalled && fp.state == STATES.Connected) {
             ops.push(this.OPERATIONS.AgentFor);
         }
         ops.forEach(op => {
             opForm.addButton(op);
         })
-        this.player.sendForm(opForm, (player, id) => {
-            if(id == null){
-                if(Settings.debugMode)
-                    this.tell(this.OPERATIONS.Cancel);
-                return;
-            }
-            let error;
-            switch (ops[id]) {
-                case this.OPERATIONS.Connect:
-                    error = fp.connect(msg => this.tell(getResponseStr(msg)));
-                    break;
-                case this.OPERATIONS.Disconnect:
-                    error = fp.disconnect(msg => this.tell(getResponseStr(msg)));
-                    break;
-                case this.OPERATIONS.TrunOnControl:
-                    error = fp.trunOnControl(msg => this.tell(getResponseStr(msg)));
-                    break;
-                case this.OPERATIONS.TrunOffControl:
-                    error = fp.trunOffControl(msg => this.tell(getResponseStr(msg)));
-                    break;
-                case this.OPERATIONS.Remove:
-                    error = fp.remove(msg => this.tell(getResponseStr(msg)));
-                    break;
-                case this.OPERATIONS.AgentFor:
-                    error = fp.setAgent(this.player);
-                    break;
-                default:
-                    logger.error(this.OPERATIONS.Unknown);
-                    this.tell(this.OPERATIONS.Unknown);
-            }
-            if (error) {
-                this.tell(error);
-            }
-        })
+        const { id } = await this.sendForm(opForm)
+        if (id == null) {
+            if (Settings.debugMode)
+                this.tell(this.OPERATIONS.Cancel);
+            return;
+        }
+        let data;
+        if (Settings.debugMode) debug(`selected operation ${ops[id]} in operate form`);
+        switch (ops[id]) {
+            case this.OPERATIONS.Connect:
+                data = await this.controller.connect(fpName);
+                this.tell(getResponseStr({ type: "connect", data }));
+                break;
+            case this.OPERATIONS.Disconnect:
+                data = await this.controller.disconnect(fpName);
+                this.tell(getResponseStr({ type: "disconnect", data }));
+                break;
+            case this.OPERATIONS.TrunOnControl:
+                data = await this.controller.setChatControl(fpName, true);
+                this.tell(getResponseStr({ type: "setChatControl", data }));
+                break;
+            case this.OPERATIONS.TrunOffControl:
+                data = await this.controller.setChatControl(fpName, false);
+                this.tell(getResponseStr({ type: "setChatControl", data }));
+                break;
+            case this.OPERATIONS.Remove:
+                data = await this.controller.remove(fpName);
+                this.tell(getResponseStr({ type: "remove", data }));
+                break;
+            case this.OPERATIONS.AgentFor:
+                if (!fp.setAgent(this.player)) {
+                    this.tell(tr('form.agent.set.fail'));
+                }
+                break;
+            default:
+                logger.error(this.OPERATIONS.Unknown);
+                this.tell(this.OPERATIONS.Unknown);
+                if (Settings.debugMode) throw new Error(this.OPERATIONS.Unknown);
+                break;
+        }
     }
 
     /**
      * 发送添加假人表单
      */
-    sendAddForm() {
+    async sendAddForm() {
         let skins = ['steve', 'alex'];
         let addForm = mc.newCustomForm();
         addForm.setTitle(tr('form.add.title'));
@@ -645,32 +730,27 @@ class FakePlayerFormHelper {
         addForm.addSwitch(tr('form.add.allow_control'), true);
         addForm.addSwitch(tr('form.add.auto_teleport'), true);
         addForm.addSwitch(tr('form.add.auto_agent'), true);
-        this.player.sendForm(addForm, (player, data) => {
-            if (data == null) {
-                if(Settings.debugMode)
-                    this.tell(this.OPERATIONS.Cancel);
-                return;
-            }
-            let fp = new FakePlayer();
-            fp.name = data[0];
-            fp.controller = this.controller;
-            fp.skin = skins[data[1]];
-            fp.allowChatControl = data[2];
-            let error = fp.add((msg) => {
-                this.tell(getResponseStr(msg));
-            })
-            if (error) {
-                this.tell(error);
-            }
-            if (data[3]) addTpQuery(fp.name, this.player.pos);
-            if (data[4]) addAgentQuery(fp.name, this.player.name);
-        })
+        const { data } = await this.sendForm(addForm);
+        if (data == null) {
+            if (Settings.debugMode)
+                this.tell(this.OPERATIONS.Cancel);
+            return;
+        }
+        let fp = new FakePlayer();
+        fp.name = data[0];
+        fp.controller = this.controller;
+        fp.skin = skins[data[1]];
+        fp.allowChatControl = data[2];
+        const addResult = await fp.add();
+        this.tell(getResponseStr({ type: "add", data: addResult }));
+        if (data[3]) addTpQuery(fp.name, this.player.pos);
+        if (data[4]) addAgentQuery(fp.name, this.player.name);
     }
 
     /**
      * 发送快速上下线表单
      */
-    sendQuickForm() {
+    async sendQuickForm() {
         let quickForm = mc.newCustomForm();
         quickForm.setTitle(tr('form.quick.title'));
         quickForm.addLabel(`${Color.YELLOW}${tr('form.quick.content')}${Color.RESET}`);
@@ -678,46 +758,46 @@ class FakePlayerFormHelper {
         fpNames.forEach(fpName => {
             let connected = this.manager.getState(fpName) == STATES.Connected;
             let stateStr = this.manager.getStateStr(fpName);
-            if(Settings.color){
+            if (Settings.color) {
                 fpName = `${connected ? Color.GREEN : Color.RED}${fpName}${Color.RESET}`;
                 stateStr = `${connected ? Color.GREEN : Color.RED}${stateStr}${Color.RESET}`;
             }
             let text = `${fpName} - ${stateStr}`;
             quickForm.addSwitch(text, connected);
         })
-        this.player.sendForm(quickForm, (player, data) => {
-            if (data == null) {
-                if(Settings.debugMode)
-                    this.tell(this.OPERATIONS.Cancel);
-                return;
-            }
-            for (let index = 0; index < data.length - 1; ++index) {
-                let select = data[index + 1];
-                let fp = this.manager.getFakePlayer(fpNames[index]);
-                let isConnected = fp.state == STATES.Connected;
-                if (select != isConnected) {
-                    if (select) {
-                        fp.connect(() => { });
-                    } else {
-                        fp.disconnect(() => { });
-                    }
+        const { data } = await this.sendForm(quickForm)
+        if (data == null) {
+            if (Settings.debugMode)
+                this.tell(this.OPERATIONS.Cancel);
+            return;
+        }
+        for (let index = 0; index < data.length - 1; ++index) {
+            let select = data[index + 1];
+            let fp = this.manager.getFakePlayer(fpNames[index]);
+            let isConnected = fp.state == STATES.Connected;
+            if (select != isConnected) {
+                if (select) {
+                    fp.connect();
+                } else {
+                    fp.disconnect();
                 }
             }
-        })
+        }
     }
 
     /**
      * 发送代理设置表单
      */
-    sendAgentForm() {
-        let agnetQuery = mc.runcmdEx('opagent query "' + this.player.name + '"');
+    async sendAgentForm() {
+        let target = this.manager.getAgentTarget(this.name);
+        if (Settings.debugMode) debug(`agent target is ${target}`);
         let agentMsg;
-        if (agnetQuery.success) {
-            agentMsg = tr('form.agent.current') + agnetQuery.output;
+        if (target) {
+            agentMsg = tr('form.agent.current') + target;
         } else {
             agentMsg = tr('form.agent.current.none');
         }
-        if(Settings.color)
+        if (Settings.color)
             agentMsg = `${Color.YELLOW}${agentMsg}${Color.RESET}`;
         let title = tr('form.agent.title') + '-' + VERSION_STRING;
         let fpNames = this.manager.getNameList();
@@ -728,48 +808,48 @@ class FakePlayerFormHelper {
             }
         })
         let ops = [];
-        if (agnetQuery.success) {
+        if (target) {
             ops.push(this.OPERATIONS.CancelAgent);
         }
         // let btnsText = onlineList.concat(ops);
         let btnsText = ops.concat(onlineList);
-        this.sendListForm(title, agentMsg, btnsText, (player, id) => {
-            if (id == null) {
-                if(Settings.debugMode)
-                    this.tell(this.OPERATIONS.Cancel);
-                return;
+        const { id } = await this.sendListForm(title, agentMsg, btnsText);
+        if (id == null) {
+            if (Settings.debugMode)
+                this.tell(this.OPERATIONS.Cancel);
+            return;
+        }
+        if (id < ops.length) {
+            switch (ops[id]) {
+                case this.OPERATIONS.CancelAgent:
+                    if (this.manager.cancelAgent(this.player.name)) {
+                        this.tell(tr('form.agent.cancel.success'));
+                    } else {
+                        this.tell(Color.red(tr('form.agent.cancel.fail')));
+                    }
+                    break;
+                default:
+                    logger.error(this.OPERATIONS.Unknown);
+                    this.tell(Color.red(this.OPERATIONS.Unknown));
+                    if (Settings.debugMode) throw new Error(this.OPERATIONS.Unknown);
             }
-            if (id < ops.length) {
-                switch (ops[id]) {
-                    case this.OPERATIONS.CancelAgent:
-                        if(this.manager.cancelAgent(this.player.name)){
-                            this.tell(tr('form.agent.cancel.success'));
-                        }else{
-                            this.tell(Color.red(tr('form.agent.cancel.fail')));
-                        }
-                        break;
-                    default:
-                        logger.error(this.OPERATIONS.Unknown);
-                        this.tell(Color.red(this.OPERATIONS.Unknown));
-                }
+        } else {
+            let res = this.manager.setAgent(this.player.name, onlineList[id - ops.length]);
+            if (res) {
+                this.tell(tr('form.agent.set.success'));
             } else {
-                let res = this.manager.setAgent(this.player.name, onlineList[id - ops.length]);
-                if (res) {
-                    this.tell(tr('form.agent.set.success'));
-                } else {
-                    this.tell(Color.red(tr('form.agent.set.failed')));
-                }
+                this.tell(Color.red(tr('form.agent.set.fail')));
             }
-        })
+        }
     }
 
     /**
      * 发送传送请求表单
      */
-    sendTeleportForm() {
+    async sendTeleportForm() {
         let title = tr('form.teleport.title') + '-' + VERSION_STRING;
         let content = tr('form.teleport.content');
-        if(Settings.color)
+        if (Settings.color)
             content = `${Color.YELLOW}${content}${Color.RESET}`;
         let fpNames = this.manager.getNameList();
         let onlineList = [];
@@ -779,21 +859,20 @@ class FakePlayerFormHelper {
             }
         })
         // let btnsText = onlineList.concat(ops)
-        this.sendListForm(title, content, onlineList, (player, id) => {
-            if (id == null) {
-                if(Settings.debugMode)
-                    this.tell(this.OPERATIONS.Cancel);
-                return;
-            }
-            let fp = mc.getPlayer(onlineList[id]);
-            fp.teleport(this.player.pos);
-        })
+        const { id } = await this.sendListForm(title, content, onlineList);
+        if (id == null) {
+            if (Settings.debugMode)
+                this.tell(this.OPERATIONS.Cancel);
+            return;
+        }
+        let fp = mc.getPlayer(onlineList[id]);
+        fp.teleport(this.player.pos);
     }
 
     /**
      * 发送菜单
      */
-    sendMenuForm() {
+    async sendMenuForm() {
         let menus = [FORM_MENU.List, FORM_MENU.Quick, FORM_MENU.Teleport/*, FORM_MENU.Control*/];
         if (agentInstalled) {
             menus.push(FORM_MENU.Agent);
@@ -804,57 +883,61 @@ class FakePlayerFormHelper {
         }
         let menuForm = mc.newSimpleForm();
         menuForm.setTitle(tr('form.menu.title') + VERSION_STRING);
-        let content  = tr('form.menu.content');
-        if(Settings.color)
+        let content = tr('form.menu.content');
+        if (Settings.color)
             content = `${Color.YELLOW}${content}${Color.RESET}`;
         menuForm.setContent(content);
         menus.forEach(menu => {
             menuForm.addButton(menu);
         })
-        this.player.sendForm(menuForm, (player, id) => {
-            if (id == null) {
-                if(Settings.debugMode)
-                    this.tell(this.OPERATIONS.Cancel);
-                return;
-            }
-            let error;
-            switch (menus[id]) {
-                case FORM_MENU.Agent:
-                    this.sendAgentForm();
-                    break;
-                case FORM_MENU.Control:
-                    this.sendControlForm();
-                    break;
-                case FORM_MENU.List:
-                    this.sendFPListForm();
-                    break;
-                case FORM_MENU.Quick:
-                    this.sendQuickForm();
-                    break;
-                case FORM_MENU.Teleport:
-                    this.sendTeleportForm();
-                    break;
-                case this.OPERATIONS.Add:
-                    this.sendAddForm();
-                    break;
-                case this.OPERATIONS.ConnectAll:
-                    error = this.controller.connectAll(msg => this.tell(getResponseStr(msg)));
-                    break;
-                case this.OPERATIONS.DisconnectAll:
-                    error = this.controller.disconnectAll(msg => this.tell(getResponseStr(msg)));
-                    break;
-                case this.OPERATIONS.RemoveAll:
-                    error = this.controller.removeAll(msg => this.tell(getResponseStr(msg)));
-                    break;
-            }
-            if (error) {
-                this.tell(error);
-            }
-        })
+        const { id } = await this.sendForm(menuForm);
+        if (id == null) {
+            if (Settings.debugMode)
+                this.tell(this.OPERATIONS.Cancel);
+            return;
+        }
+        let msg;
+        switch (menus[id]) {
+            case FORM_MENU.Agent:
+                await this.sendAgentForm();
+                break;
+            case FORM_MENU.Control:
+                await this.sendControlForm();
+                break;
+            case FORM_MENU.List:
+                await this.sendFPListForm();
+                break;
+            case FORM_MENU.Quick:
+                await this.sendQuickForm();
+                break;
+            case FORM_MENU.Teleport:
+                await this.sendTeleportForm();
+                break;
+            case this.OPERATIONS.Add:
+                await this.sendAddForm();
+                break;
+            case this.OPERATIONS.ConnectAll:
+                msg = await this.controller.connectAll();
+                this.tell(getResDataStr('connect_all', msg));
+                break;
+            case this.OPERATIONS.DisconnectAll:
+                msg = await this.controller.disconnectAll();
+                this.tell(getResDataStr('disconnect_all', msg));
+                break;
+            case this.OPERATIONS.RemoveAll:
+                msg = await this.controller.removeAll();
+                this.tell(getResDataStr('remove_all', msg));
+                break;
+            default:
+                logger.error(this.OPERATIONS.Unknown);
+                this.tell(Color.red(this.OPERATIONS.Unknown));
+                if (Settings.debugMode) throw new Error(this.OPERATIONS.Unknown);
+                break;
+        }
     }
     CONTROL_MENU = {
-        VERSION : 'version',
-        HELP : 'help',
+        VERSION: 'version',
+        HELP: 'help',
         POSITION: 'position',
         INVENTORY: 'inventory',
         SELECTED: 'selected',
@@ -867,48 +950,53 @@ class FakePlayerFormHelper {
     /**
      * 发送聊天控制表单
      */
-    sendControlForm() {
+    async sendControlForm() {
         let title = tr('form.control.title') + '-' + VERSION_STRING;
         let content = tr('form.control.content');
-        if(Settings.color)
+        if (Settings.color)
             content = `${Color.YELLOW}${content}${Color.RESET}`;
         let btnsText = Object.values(this.CONTROL_MENU);
-        this.sendListForm(title, content, btnsText, (player, id) => {
+        await this.sendListForm(title, content, btnsText, (player, id) => {
             if (id == null) {
-                if(Settings.debugMode)
+                if (Settings.debugMode)
                     this.tell(this.OPERATIONS.Cancel);
                 return;
             }
             switch (btnsText[id]) {
                 case this.CONTROL_MENU.HELP:
-                    this.tell(tr('form.control.help'));
+                    this.tell(tr('form.control.op.help'));
                     break;
                 case this.CONTROL_MENU.POSITION:
-                    this.tell(tr('form.control.position'));
+                    this.tell(tr('form.control.op.position'));
                     break;
                 case this.CONTROL_MENU.INVENTORY:
-                    this.tell(tr('form.control.inventory'));
+                    this.tell(tr('form.control.op.inventory'));
                     break;
                 case this.CONTROL_MENU.SELECTED:
-                    this.tell(tr('form.control.selected'));
+                    this.tell(tr('form.control.op.selected'));
                     break;
                 case this.CONTROL_MENU.DROP:
-                    this.tell(tr('form.control.drop'));
+                    this.tell(tr('form.control.op.drop'));
                     break;
                 case this.CONTROL_MENU.DROP_SLOT:
-                    this.tell(tr('form.control.drop_slot'));
+                    this.tell(tr('form.control.op.drop_slot'));
                     break;
                 case this.CONTROL_MENU.DROP_ALL:
-                    this.tell(tr('form.control.drop_all'));
+                    this.tell(tr('form.control.op.drop_all'));
                     break;
                 case this.CONTROL_MENU.SYNC_START:
-                    this.tell(tr('form.control.sync_start'));
+                    this.tell(tr('form.control.op.sync_start'));
                     break;
                 case this.CONTROL_MENU.SYNC_STOP:
-                    this.tell(tr('form.control.sync_stop'));
+                    this.tell(tr('form.control.op.sync_stop'));
                     break;
                 case this.CONTROL_MENU.VERSION:
-                    this.tell(tr('form.control.version'));
+                    this.tell(tr('form.control.op.version'));
+                    break;
+                default:
+                    logger.error(this.OPERATIONS.Unknown);
+                    this.tell(Color.red(this.OPERATIONS.Unknown));
+                    if (Settings.debugMode) throw new Error(this.OPERATIONS.Unknown);
                     break;
             }
         });
@@ -950,60 +1038,97 @@ class FakePlayerManager {
         FakePlayerManager.Instances.push(this);
     }
     init() {
-        this.controller.listen("onAdd", (fpName, state) => this.onAdd(fpName, state));
-        this.controller.listen("onRemove", (fpName) => this.onRemove(fpName));
-        this.controller.listen("onConnect", (fpName, state) => this.onConnect(fpName, state));
-        this.controller.listen("onDisonnect", (fpName, state) => this.onDisonnect(fpName, state));
-        this.controller.listen("onSetChatControl", () => this.onSetChatControl());
+        this.controller.listen(FakePlayerController.EventType.Add, this.onAdd.bind(this));
+        this.controller.listen(FakePlayerController.EventType.Remove, this.onRemove.bind(this));
+        this.controller.listen(FakePlayerController.EventType.Connect, this.onConnect.bind(this));
+        this.controller.listen(FakePlayerController.EventType.Disconnect, this.onDisconnect.bind(this));
+        this.controller.listen(FakePlayerController.EventType.SetChatControl, this.onSetChatControl.bind(this));
         isNewFPVersion = true;
         if (this.controller.ready) {
             this.refreshData();
         }
     }
+
     //========= Form Api =========
     sendListForm(player) {
-        return this.refreshData(() => {
+        (async () => {
+            if (!this.ready) {
+                if (Settings.debugMode) debug('FakePlayerManager is not ready, waiting...');
+                logger.error('FakePlayerManager is not ready');
+                await this.refreshData();
+            } else {
+                this.refreshData();
+            }
             let fh = new FakePlayerFormHelper(this, player);
-            fh.sendFPListForm();
-        })
+            await fh.sendFPListForm();
+        })().catch(e => {
+            logError('sendListForm', e, player);
+        });
     }
     sendQuickForm(player) {
-        return this.refreshData(() => {
+        (async () => {
+            if (!this.ready) {
+                await this.refreshData();
+            } else {
+                this.refreshData();
+            }
             let fh = new FakePlayerFormHelper(this, player);
-            fh.sendQuickForm();
-        })
+            await fh.sendAgentForm();
+        })().catch(e => {
+            logError('sendQuickForm', e, player);
+        });
     }
     sendControlForm(player) {
-        let error = this.refreshData();
-        if (error) {
-            return error;
-        }
-        let fh = new FakePlayerFormHelper(this, player);
-        fh.sendControlForm();
+        (async () => {
+            if (!this.ready) {
+                await this.refreshData();
+            } else {
+                this.refreshData();
+            }
+            let fh = new FakePlayerFormHelper(this, player);
+            await fh.sendControlForm();
+        })().catch(e => {
+            logError('sendControlForm', e, player);
+        });
     }
     sendMenuForm(player) {
-        let error = this.refreshData();
-        if (error) {
-            return error;
-        }
+        this.refreshData();
         let fh = new FakePlayerFormHelper(this, player);
-        fh.sendMenuForm();
+        fh.sendMenuForm().catch(e => {
+            logError('sendMenuForm', e, player);
+        });
     }
     sendAgentForm(player) {
-        return this.refreshData(() => {
+        (async () => {
+            if (!this.ready) {
+                await this.refreshData();
+            } else {
+                this.refreshData();
+            }
             let fh = new FakePlayerFormHelper(this, player);
-            fh.sendAgentForm();
-        })
+            await fh.sendAgentForm();
+        })().catch(e => {
+            logError('sendAgentForm', e, player);
+        });
     }
     sendAddForm(player) {
         let fh = new FakePlayerFormHelper(this, player);
-        fh.sendAddForm();
+        fh.sendAddForm().catch(e => {
+            logError('sendMenuForm', e, player);
+        });
     }
     sendTeleportForm(player) {
-        return this.refreshData(() => {
+        (async () => {
+            if (!this.ready) {
+                await this.refreshData();
+            } else {
+                this.refreshData();
+            }
             let fh = new FakePlayerFormHelper(this, player);
-            fh.sendTeleportForm();
-        })
+            await fh.sendTeleportForm();
+        })().catch(e => {
+            logError('sendTeleportForm', e, player);
+        });
     }
 
     //========= Event Api =========
@@ -1027,12 +1152,14 @@ class FakePlayerManager {
         let f = File.readFrom(lastestOnlineTimePath);
         if (f) {
             this.lastOnlineTimes = JSON.parse(f);
-            debug(`loadLastOnlineTimes: ${JSON.stringify(this.lastOnlineTimes)}`);
+            if (Settings.debugMode) debug(`loadLastOnlineTimes: ${JSON.stringify(this.lastOnlineTimes)}`);
+        } else {
+            if (Settings.debugMode) debug(`loadLastOnlineTimes: ${lastestOnlineTimePath} not found`);
         }
     }
     static saveLastOnlineTimes() {
         File.writeTo(lastestOnlineTimePath, JSON.stringify(this.lastOnlineTimes));
-        debug(`saveLastOnlineTimes: ${JSON.stringify(this.lastOnlineTimes)}`);
+        if (Settings.debugMode) debug(`saveLastOnlineTimes: ${JSON.stringify(this.lastOnlineTimes)}`);
     }
 
     //========= Player Api =========
@@ -1121,50 +1248,48 @@ class FakePlayerManager {
      * 刷新假人数据
      * @param {Function} callback 回调函数
      */
-    refreshData(callback = null) {
-        this.ready = false
-        if (isNewFPVersion) {
-            return this.controller.getAllState(msg => {
-                this.loadData(msg.data.playersData);
-                this.ready = true;
-                if (callback != null) {
-                    callback();
+    async refreshData() {
+        this.ready = false;
+        let data = await this.controller.getAllState();
+        this.loadData(data);
+        this.ready = true;
+    }
+    /**
+     * 获取代理数据
+     * @returns {{agent: string, target: string}[]}
+     */
+    listAgent() {
+        let res = mc.runcmdEx(`opagent list`);
+        if (Settings.debugMode) debug(JSON.stringify(res));
+        if (res.success) {
+            let list = [];
+            let lines = res.output.split('\n');
+            for (let [index, line] of lines.entries()) {
+                if (index == 0)
+                    continue;
+                let { agent, target } = line.match(/^(.+?)\s*->\s*(.+?)$/) || [];
+                if (agent && target) {
+                    list.push({ agent, target });
                 }
-            });
+            }
+            return list;
         } else {
-            return this.controller.list(msg => {
-                let list = msg.data.list
-                let sum = 0
-                list.forEach(fpName => {
-                    this.controller.getState(fpName, msg => {
-                        let state = msg.data.state
-                        this.players[fpName] = {
-                            state: state,
-                            allowChatControl: false
-                        }
-                        sum++
-                        if (sum == list.length) {
-                            this.ready = true
-                            if (callback != null) {
-                                callback()
-                            }
-                        }
-                    })
-                })
-            })
+            return [];
         }
     }
     /**
-     * 
+     * 设置假人代理
+     * @param {String} agentName 代理名称
+     * @param {String} targetName 代理目标名称
+     * @returns {Boolean} 是否成功
      */
-    setAgent(name, agent) {
-        let res = mc.runcmdEx(`opagent set ${name} ${agent}`);
-        debug(JSON.stringify(res));
+    setAgent(agentName, targetName) {
+        let res = mc.runcmdEx(`opagent set ${targetName} ${agentName}`);
         return res.success;
     }
     /**
      * 取消假人代理
-     * @param {String} name 假人名称
+     * @param {String} agentName 代理名称
      * @returns {Boolean} 是否成功
      * @example
      * let success = fpm.cancelAgent(name);
@@ -1176,17 +1301,36 @@ class FakePlayerManager {
      */
     cancelAgent(name) {
         let res = mc.runcmdEx(`opagent clear ${name}`);
-        debug(JSON.stringify(res));
-        return res.success;
+        if (Settings.debugMode) debug(JSON.stringify(res));
+        if (res.success)
+            return true;
+
+        let agentList = this.listAgent();
+        let agentName;
+        for (let { agent, target } of agentList) {
+            if (target == name) {
+                agentName = agent;
+                break;
+            } else if (agent == name) {
+                agentName = target;
+                break;
+            }
+        }
+        if (agentName) {
+            let res = mc.runcmdEx(`opagent clear ${agentName}`);
+            if (Settings.debugMode) debug(JSON.stringify(res));
+            return res.success;
+        }
+        return false;
     }
     /**
      * 获取假人代理
      */
-    getAgent(name) {
-        let res = mc.runcmdEx(`opagent get ${name}`);
-        debug(JSON.stringify(res));
-        if(res.success) {
-            return res.output.split('\n')[1].split(' -> ')[1];
+    getAgentTarget(agentName) {
+        let res = mc.runcmdEx(`opagent query ${agentName}`);
+        if (Settings.debugMode) debug(JSON.stringify(res));
+        if (res.success) {
+            return res.output.split('\n')[0].split(' -> ')[1];
         }
         return null;
     }
@@ -1195,10 +1339,8 @@ class FakePlayerManager {
     /**
      * 重新连接 WebSocket
      */
-    reConnect() {
-        this.controller.asyncConnect().then(() => {
-            this.refreshData();
-        });
+    async connectWebsocket() {
+        return this.controller.connectWebsocket();
     }
 
     //========= Listener =========
@@ -1211,7 +1353,7 @@ class FakePlayerManager {
     onAdd(fpName, state) {
         FakePlayerManager.setLastOnlineTime(fpName);
         // 为了获取聊天控制开关，刷新所有假人数据
-        return this.refreshData();
+        this.refreshData();
     }
     /**
      * 移除假人监听
@@ -1240,7 +1382,7 @@ class FakePlayerManager {
      * @param {String} fpName 假人名称
      * @param {STATES} state 假人状态
      */
-    onDisonnect(fpName, state) {
+    onDisconnect(fpName, state) {
         let fp = this.getFakePlayer(fpName);
         if (fp) {
             fp.state = state;
@@ -1255,23 +1397,67 @@ class FakePlayerManager {
      * @param {Boolean} allow 允许聊天控制
      */
     onSetChatControl(fpName, allow) {
-        return this.refreshData();
+        if (Settings.debugMode) debug(`${fpName} 设置聊天控制 ${allow}`);
+        this.refreshData();
     }
 }
 
-class FakePlayerWebSocketController {
+//////////////////////////////////////// Controller ////////////////////////////////////////
+class FakePlayerController {
     /**
      * @type {FakePlayerManager} 假人管理器
      */
     manager;
     /**
+     * @type {Boolean} 是否已连接
+     */
+    _ready = false;
+    constructor() {
+    }
+
+    get ready() {
+        return this._ready;
+    }
+
+    set ready(value) {
+        this._ready = value;
+        if (value && this.manager) {
+            this.manager.refreshData();
+        }
+    }
+
+    static EventType = {
+        Add: 'add',
+        Remove: 'remove',
+        Connect: 'connect',
+        Disconnect: 'disconnect',
+        SetChatControl: 'set_chat_control'
+    }
+
+    static OperationType = {
+        List: 'list',
+        Add: 'add',
+        Remove: 'remove',
+        GetState: 'getState',
+        GetAllState: 'getState_all',
+        Connect: 'connect',
+        Disconnect: 'disconnect',
+        RemoveAll: 'remove_all',
+        ConnectAll: 'connect_all',
+        DisconnectAll: 'disconnect_all',
+        SetChatControl: 'setChatControl',
+    }
+}
+
+class FakePlayerWebSocketController extends FakePlayerController {
+    /**
      * @type {Map<String,Function>} 回调函数集合
      */
     callbacks = {};
     /**
-     * @type {Boolean} 是否已连接
+     * @type {WSClient} WebSocket 实例
      */
-    ready = false;
+    wsc = null;
 
     /**
      * FakePlayerWebSocketController
@@ -1279,13 +1465,14 @@ class FakePlayerWebSocketController {
      * @param {Integer} port WebSocket端口
      */
     constructor(url, port) {
+        super();
         this.wsc = network.newWebSocket();
-        try{
+        try {
             let res = mc.runcmdEx('opagent version');
             if (res && res.success) {
                 agentInstalled = true;
             }
-        }catch(e){
+        } catch (e) {
             agentInstalled = false;
         }
         this.wsc.listen("onTextReceived", this.onTextReceived.bind(this));
@@ -1293,416 +1480,21 @@ class FakePlayerWebSocketController {
         this.wsc.listen("onError", this.onError.bind(this));
         this.wsc.listen("onLostConnection", this.onLostConnection.bind(this));
         this.wsAddress = url + ":" + port;
-        debug(`FakePlayerWebSocketController: ${this.wsAddress}`);
-
-        (async () => {
-            await wait(1000);
-            let result = await this.asyncConnect();
-            if(!result) {
-                trError('ws.error.connect', { code: this.wsc.errorCode() });
-            }
-        })().catch(e => {
-            this.ready = false;
-            logger.error(`Error in connecting to ${this.wsAddress}: ${e}`);
-        });
-    }
-
-    /**
-     * 异步连接
-     * @returns {Promise<Boolean>} 是否连接成功
-     */
-    async asyncConnect() {
-        if (this.ready)
-            return true;
-
-        if (this.wsc.connectAsync) {
-            return new Promise((resolve, reject) => {
-                let result = this.wsc.connectAsync(this.wsAddress, (success) => {
-                    this.ready = success;
-                    resolve(success);
-                });
-                if (!result)
-                    reject(new Error(`Fail to connect to ${this.wsAddress}`));
-            });
-        } else {
-            // 假装异步来统一 api
-            return new Promise((resolve, reject) => {
-                let result = this.wsc.connect(this.wsAddress);
-                this.ready = success;
-                resolve(result);
-            });
-        }
-    }
-
-    connectWebsocket(callback = null) {
-        if(this.ready)
-            return;
-        let tmp_callback = (result)=>{
-            this.ready = result;
-            if(callback)
-                callback(result);
-            else if (!result)
-                trError('ws.error.connect', { code: this.wsc.errorCode() });
-        }
-        if(this.wsc.connectAsync){
-            this.wsc.connectAsync(this.wsAddress, tmp_callback);
-        }else{
-            let result = this.wsc.connect(this.wsAddress);
-            tmp_callback(result);
-        }
-    }
-
-    /**
-     * 获取格式化后的回调消息
-     * @param {String} response 回调消息
-     * @returns {String} 格式化后的回调消息
-     */
-    getResponseStr(response) {
-        return getResponseStr(response);
-    }
-
-    //========= Callback =========
-    /**
-     * 回调控制
-     * @param {Integer} id 回调ID
-     * @param {{type: string, data: any}} msg 回调消息
-     */
-    onCallback(id, msg) {
-        if (this.callbacks.hasOwnProperty(id)) {
-            this.callbacks[id](msg);
-            delete this.callbacks[id];
-        } else {
-            logger.info(Color.transformToConsole(getResponseStr(msg)));
-        }
-    }
-
-    //========= Event =========
-    /**
-     * 添加假人客户端 WebSocket 消息监听
-     * @param {String} type 事件类型
-     * @param {Function} callback 回调函数
-     */
-    listen(type, callback) {
-        switch (type) {
-            case "onAdd":
-                this.onAdd = callback
-                break;
-            case "onRemove":
-                this.onRemove = callback
-                break
-            case "onConnect":
-                this.onConnect = callback
-                break;
-            case "onDisonnect":
-                this.onDisonnect = callback
-                break
-            case "onSetChatControl":
-                this.onSetChatControl = callback
-                break
-            default:
-                trError('ws.error.listen.unknown_type')
-        }
-    }
-
-    /**
-     * 假人客户端 WebSocket 事件监听
-     * @param {String} evType 事件类型
-     * @param {Object} evData 事件数据
-     */
-    onEvent(evType, evData) {
-        let fpName = evData.name;
-        switch (evType) {
-            case 'add':
-                if (this.onAdd)
-                    this.onAdd(fpName, evData.state);
-                break;
-            case 'remove':
-                if (this.onRemove)
-                    this.onRemove(fpName);
-                break
-            case 'connect':
-                if (this.onConnect)
-                    this.onConnect(fpName, evData.state);
-                break
-            case 'disconnect':
-                if (this.onDisonnect)
-                    this.onDisonnect(fpName, evData.state);
-                break
-            case 'setChatControl':
-                if (this.onSetChatControl)
-                    this.onSetChatControl();
-                break
-            default:
-                trError('ws.error.event.unknown_type', { type: evType })
-        }
-    }
-
-    //========= OnMessage =========
-    /**
-     * 默认消息处理
-     * @param {String} msg 消息
-     */
-    defaultOnMessage(msg) {
-        logger.info(msg);
-    }
-    /**
-     * WebSocket 文本消息处理
-     * @param {String} str 消息
-     */
-    onTextReceived(str) {
-        let msg = JSON.parse(str);
-        debug(`<<\n${JSON.stringify(msg, null, 4)}`);
-        if (msg.hasOwnProperty('type') && msg.type == "setChatControl") {
-            this.onEvent("setChatControl", { name: msg.data.name });
-        }
-        if (msg.hasOwnProperty('event')) {
-            this.onEvent(msg.event, msg.data);
-        } else if (msg.hasOwnProperty('id')) {
-            this.onCallback(msg.id, msg);
-        } else {
-            this.defaultOnMessage(msg);
-        }
-    }
-
-    /**
-     * WebSocket 二进制消息处理
-     * @param {ByteBuffer} data 二进制消息
-     */
-    onBinaryReceived(data) {
-        trInfo("ws.receive.bin", data.toString())
-    }
-
-    /**
-     * WebSocket 错误处理
-     * @param {String} msg 错误消息
-     */
-    onError(msg) {
-        trError('ws.error.on_error', { msg: msg });
-    }
-
-    /**
-     * WebSocket 连接断开处理
-     * @param {Integer} code 错误代码
-     */
-    onLostConnection(code) {
-        this.ready = false;
-        trError('ws.error.lost_connection', { code: code });
-        this.connectWebsocket();
-    }
-
-    //========= sendMsg =========
-    /**
-     * 生成回调ID
-     * @returns {Integer} 回调ID
-     */
-    genPacketId() {
-        while (true) {
-            let id = system.randomGuid()
-            if (!this.callbacks.hasOwnProperty(id)) return id
-        }
-    }
-    _addCallback(id, callback) {
-        if (callback)
-            this.callbacks[id] = callback
-    }
-    _removeCallback(id) {
-        if (this.callbacks.hasOwnProperty(id))
-            delete this.callbacks[id]
-    }
-
-    async sendAsync(msg) {
-        if (!this.ready) {
-            if(!await this.asyncConnect()){
-                return tr("ws.error.send_msg.connect_failed")
-            }
-        }
-        return new Promise((resolve, reject) => {
-            let id = this.genPacketId();
-            msg.id = id;
-            this._addCallback(id, resolve);
-            let success = this.wsc.send(JSON.stringify(msg));
-            if (!success) {
-                reject(tr('ws.error.send', { code: this.wsc.errorCode() }));
-                this._removeCallback(id);
-                (async ()=>{
-                    await wait(1000);
-                    await this.asyncConnect();
-                })();
-            }
-        });
-    }
-
-    /**
-     * 发送 WebSocket 文本消息
-     * @param {Object} msg 消息
-     * @param {Function} callback 回调函数
-     * @returns {String} 回调错误消息
-     */
-    sendMsg(msg, callback) {
-        (async () => {
-            let res = await this.sendAsync(msg);
-            if (callback)
-                callback(res);
-        })();
-    }
-
-    //========= AllowList =========
-    addAllowList(name) {
-        let res = mc.runcmdEx('allowlist add "' + name + '"')
-        if (!res.success) {
-            logger.info(res.output);
-        }
-    }
-    removeAllowList(name) {
-        let res = mc.runcmdEx('allowlist remove "' + name + '"')
-        if (!res.success) {
-            logger.info(res.output);
-        }
-    }
-    removeAllAllowList() {
-        for (let name in players) {
-            this.removeAllowList(name);
-        }
-    }
-
-    //========= WebSocket Api =========
-    list(callback) {
-        let msg = {
-            type: 'list',
-        }
-        return this.sendMsg(msg, callback);
-    }
-    add(name, callback, allowChatControl = false, skin = "steve") {
-        this.addAllowList(name);
-        let msg = {
-            type: 'add',
-            data: {
-                name: name,
-                skin: skin,
-                allowChatControl: allowChatControl,
-            }
-        }
-        return this.sendMsg(msg, callback);
-    }
-    remove(name, callback) {
-        this.removeAllowList(name);
-        let msg = {
-            type: 'remove',
-            data: {
-                name: name,
-            }
-        }
-        return this.sendMsg(msg, callback);
-    }
-    getState(name, callback) {
-        let msg = {
-            type: 'getState',
-            data: {
-                name: name,
-            }
-        }
-        return this.sendMsg(msg, callback);
-    }
-    getAllState(callback) {
-        let msg = {
-            type: 'getState_all',
-        }
-        return this.sendMsg(msg, callback);
-    }
-    disconnect(name, callback) {
-        let msg = {
-            type: 'disconnect',
-            data: {
-                name: name,
-            }
-        }
-        return this.sendMsg(msg, callback);
-    }
-    connect(name, callback) {
-        let msg = {
-            type: 'connect',
-            data: {
-                name: name,
-            }
-        }
-        return this.sendMsg(msg, callback);
-    }
-    removeAll(callback) {
-        this.removeAllAllowList();
-        let msg = {
-            type: 'remove_all',
-        }
-        return this.sendMsg(msg, callback);
-    }
-    connectAll(callback) {
-        let msg = {
-            type: 'connect_all',
-        }
-        return this.sendMsg(msg, callback);
-    }
-    disconnectAll(callback) {
-        let msg = {
-            type: 'disconnect_all',
-        }
-        return this.sendMsg(msg, callback);
-    }
-    setChatControl(name, allowChatControl, callback) {
-        let msg = {
-            type: 'setChatControl',
-            data: {
-                name: name,
-                allowChatControl: allowChatControl,
-            }
-        }
-        return this.sendMsg(msg, callback);
-    }
-}
-
-
-
-class AsyncFakePlayerWebSocketController {
-    /**
-     * @type {FakePlayerManager} 假人管理器
-     */
-    manager;
-    /**
-     * @type {Map<String,Function>} 回调函数集合
-     */
-    callbacks = {};
-    /**
-     * @type {Boolean} 是否已连接
-     */
-    ready = false;
-
-    /**
-     * FakePlayerWebSocketController
-     * @param {String} url WebSocket地址
-     * @param {Integer} port WebSocket端口
-     */
-    constructor(url, port) {
-        this.wsc = network.newWebSocket();
-        try{
-            let res = mc.runcmdEx('opagent version');
-            if (res && res.success) {
-                agentInstalled = true;
-            }
-        }catch(e){
-            agentInstalled = false;
-        }
-        this.wsc.listen("onTextReceived", this.onTextReceived.bind(this));
-        this.wsc.listen("onBinaryReceived", this.onBinaryReceived.bind(this));
-        this.wsc.listen("onError", this.onError.bind(this));
-        this.wsc.listen("onLostConnection", this.onLostConnection.bind(this));
-        this.wsAddress = url + ":" + port;
-        debug(`FakePlayerWebSocketController: ${this.wsAddress}`);
-        this.asyncConnect().then((result) => {
-            if(!result)
+        if (Settings.debugMode) debug(`FakePlayerWebSocketController: ${this.wsAddress}`);
+        this.connectWebsocket().then((result) => {
+            if (!result)
                 trError('ws.error.connect', { code: this.wsc.errorCode() });
         }).catch(e => {
             this.ready = false;
             logger.error(`Error in connecting to ${this.wsAddress}: ${e}`);
         });
     }
+
+    get ready() {
+        if (Settings.debugMode) debug(`FakePlayerWebSocketController state: ${this._ready}`);
+        return this.wsc.status === WSClient.Open;
+    }
+    set ready(value) { }
 
     /**
      * 异步连接
@@ -1740,6 +1532,10 @@ class AsyncFakePlayerWebSocketController {
         return getResponseStr(response);
     }
 
+    getResDataStr(...args) {
+        return getResDataStr(...args);
+    }
+
     //========= Callback =========
     /**
      * 回调控制
@@ -1747,7 +1543,7 @@ class AsyncFakePlayerWebSocketController {
      * @param {Object} msg 回调消息
      */
     onCallback(id, msg) {
-        if (this.callbacks.hasOwnProperty(id)) {
+        if (this.hasCallback(id)) {
             this.callbacks[id](msg);
             delete this.callbacks[id];
         } else {
@@ -1758,24 +1554,24 @@ class AsyncFakePlayerWebSocketController {
     //========= Event =========
     /**
      * 添加假人客户端 WebSocket 消息监听
-     * @param {String} type 事件类型
-     * @param {Function} callback 回调函数
+     * @param {string} type 事件类型
+     * @param {Function<{name:string,state:STATES?}>} callback 回调函数
      */
     listen(type, callback) {
         switch (type) {
-            case "onAdd":
+            case FakePlayerController.EventType.Add:
                 this.onAdd = callback
                 break;
-            case "onRemove":
+            case FakePlayerController.EventType.Remove:
                 this.onRemove = callback
                 break
-            case "onConnect":
+            case FakePlayerController.EventType.Connect:
                 this.onConnect = callback
                 break;
-            case "onDisonnect":
+            case FakePlayerController.EventType.Disconnect:
                 this.onDisonnect = callback
                 break
-            case "onSetChatControl":
+            case FakePlayerController.EventType.SetChatControl:
                 this.onSetChatControl = callback
                 break
             default:
@@ -1786,28 +1582,27 @@ class AsyncFakePlayerWebSocketController {
     /**
      * 假人客户端 WebSocket 事件监听
      * @param {String} evType 事件类型
-     * @param {Object} evData 事件数据
+     * @param {{name:string, state: STATES?}} evData 事件数据
      */
-    onEvent(evType, evData) {
-        let fpName = evData.name;
+    onEvent(evType, { name, state }) {
         switch (evType) {
-            case 'add':
+            case FakePlayerController.EventType.Add:
                 if (this.onAdd)
-                    this.onAdd(fpName, evData.state);
+                    this.onAdd(name, state);
                 break;
-            case 'remove':
+            case FakePlayerController.EventType.Remove:
                 if (this.onRemove)
-                    this.onRemove(fpName);
+                    this.onRemove(name);
                 break
-            case 'connect':
+            case FakePlayerController.EventType.Connect:
                 if (this.onConnect)
-                    this.onConnect(fpName, evData.state);
+                    this.onConnect(name, state);
                 break
-            case 'disconnect':
+            case FakePlayerController.EventType.Disconnect:
                 if (this.onDisonnect)
-                    this.onDisonnect(fpName, evData.state);
+                    this.onDisonnect(name, state);
                 break
-            case 'setChatControl':
+            case FakePlayerController.EventType.SetChatControl:
                 if (this.onSetChatControl)
                     this.onSetChatControl();
                 break
@@ -1830,17 +1625,33 @@ class AsyncFakePlayerWebSocketController {
      */
     onTextReceived(str) {
         let msg = JSON.parse(str);
-        debug(`<<\n${JSON.stringify(msg, null, 4)}`);
-        if (msg.hasOwnProperty('type') && msg.type == "setChatControl") {
-            this.onEvent("setChatControl", { name: msg.data.name });
+        if (Settings.debugMode) debug(`<<\n${JSON.stringify(msg, null, 4)}`);
+        if (Object.prototype.hasOwnProperty.call(msg, 'type') && msg.type == "setChatControl") {
+            this.onEvent(FakePlayerController.EventType.SetChatControl, { name: msg.data.name });
         }
-        if (msg.hasOwnProperty('event')) {
+        if (Object.prototype.hasOwnProperty.call(msg, 'event')) {
             this.onEvent(msg.event, msg.data);
-        } else if (msg.hasOwnProperty('id')) {
+        } else if (Object.prototype.hasOwnProperty.call(msg, 'id')) {
             this.onCallback(msg.id, msg);
         } else {
             this.defaultOnMessage(msg);
         }
+    }
+
+    /**
+     * waitForReady
+     * @param {Number} timeout 超时时间
+     * @returns {Promise<Boolean>} 是否连接成功
+     */
+    async waitForReady(timeout = 5000) {
+        this.wsc.shutdown();
+        return new Promise((resolve, reject) => {
+            this.connectWebsocket().then(resolve).catch(reject);
+            wait(timeout).then(() => {
+                logger.info("Test connection timeout");
+                resolve(this.ready)
+            });
+        });
     }
 
     /**
@@ -1865,27 +1676,40 @@ class AsyncFakePlayerWebSocketController {
      */
     onLostConnection(code) {
         this.ready = false;
+        if (this.manager) {
+            logger.error(Color.transformToConsole(`Lost connection to ${this.wsAddress}`));
+            this.manager.ready = false;
+        }
         trError('ws.error.lost_connection', { code: code });
-        this.connectWebsocket();
+        this.connectWebsocket().then((result) => {
+            if (!result)
+                trError('ws.error.connect', { code: this.wsc.errorCode() });
+        }).catch((err) => {
+            logError("Error in Reconnect Websocket in onLostConnection", err);
+        });
     }
 
     //========= sendMsg =========
+    hasCallback(id) {
+        return Object.prototype.hasOwnProperty.call(this.callbacks, id);
+    }
     /**
      * 生成回调ID
      * @returns {Integer} 回调ID
      */
     genPacketId() {
-        while (true) {
-            let id = system.randomGuid()
-            if (!this.callbacks.hasOwnProperty(id)) return id
+        let id = system.randomGuid();
+        while (this.hasCallback(id)) {
+            id = system.randomGuid();
         }
+        return id;
     }
     _addCallback(id, callback) {
-        if (callback)
+        if (callback && !this.hasCallback(id))
             this.callbacks[id] = callback
     }
     _removeCallback(id) {
-        if (this.callbacks.hasOwnProperty(id))
+        if (this.hasCallback(id))
             delete this.callbacks[id]
     }
 
@@ -1895,22 +1719,25 @@ class AsyncFakePlayerWebSocketController {
      * @returns {Promise<{type: string, data: object}>} 回调消息
      */
     async send(msg) {
+        if (Settings.debugMode) debug(`>>\n${JSON.stringify(msg, null, 4)}`);
         if (!this.ready) {
-            if(!await this.asyncConnect()){
-                return tr("ws.error.send_msg.connect_failed")
+            if (!await this.connectWebsocket()) {
+                if (Settings.debugMode) logError("Error in send msg", msg);
+                throw new Error(tr("ws.error.send", { code: this.wsc.errorCode() }));
             }
         }
         return new Promise((resolve, reject) => {
-            let id = this.genPacketId();
+            const id = this.genPacketId();
             msg.id = id;
             this._addCallback(id, resolve);
             let success = this.wsc.send(JSON.stringify(msg));
             if (!success) {
-                reject(tr('ws.error.send', { code: this.wsc.errorCode() }));
+                if (Settings.debugMode) logger.error(tr("ws.error.send", { code: this.wsc.errorCode() }));
+                reject(tr("ws.error.send", { code: this.wsc.errorCode() }));
                 this._removeCallback(id);
-                (async ()=>{
+                (async () => {
                     await wait(1000);
-                    await this.asyncConnect();
+                    await this.connectWebsocket();
                 })();
             }
         });
@@ -1942,7 +1769,7 @@ class AsyncFakePlayerWebSocketController {
      */
     async list() {
         const msg = {
-            type: 'list',
+            type: FakePlayerController.OperationType.List,
         }
         const { type, data: { list } } = await this.send(msg);
         return list;
@@ -1952,12 +1779,12 @@ class AsyncFakePlayerWebSocketController {
      * @param {string} name 假人名称
      * @param {boolean} allowChatControl 是否允许聊天控制
      * @param {string} skin 假人皮肤
-     * @returns {Promise<{name: string, success: boolean, resaon: string}>} 返回结果
+     * @returns {Promise<{name:string, success:boolean, resaon: string}>} 返回结果
      */
     async add(name, allowChatControl = false, skin = "steve") {
         this.addAllowList(name);
         let msg = {
-            type: 'add',
+            type: FakePlayerController.OperationType.Add,
             data: {
                 name: name,
                 skin: skin,
@@ -1970,12 +1797,12 @@ class AsyncFakePlayerWebSocketController {
     /**
      * 移除假人
      * @param {string} name 假人名称
-     * @returns {Promise<{name: string, success: boolean, resaon: string}>} 返回结果
+     * @returns {Promise<{name:string, success:boolean, resaon: string}>} 返回结果
      */
     async remove(name) {
         this.removeAllowList(name);
         let msg = {
-            type: 'remove',
+            type: FakePlayerController.OperationType.Remove,
             data: {
                 name: name,
             }
@@ -1986,11 +1813,11 @@ class AsyncFakePlayerWebSocketController {
     /**
      * 获取假人状态
      * @param {string} name 假人名称 
-     * @returns {Promise<{name: string, success: boolean, resaon: string, state: STATES}>} 返回结果
+     * @returns {Promise<{name:string, success:boolean, resaon: string, state: STATES}>} 返回结果
      */
     async getState(name) {
         let msg = {
-            type: 'getState',
+            type: FakePlayerController.OperationType.GetState,
             data: {
                 name: name,
             }
@@ -2004,7 +1831,7 @@ class AsyncFakePlayerWebSocketController {
      */
     async getAllState() {
         let msg = {
-            type: 'getState_all',
+            type: FakePlayerController.OperationType.GetAllState,
         }
         const { type, data: { playersData } } = await this.send(msg);
         return playersData;
@@ -2012,11 +1839,11 @@ class AsyncFakePlayerWebSocketController {
     /**
      * 断开假人连接
      * @param {string} name 假人名称
-     * @returns {Promise<{name: string, success: boolean, resaon: string?}>} 返回结果
+     * @returns {Promise<{name:string, success:boolean, resaon: string?}>} 返回结果
      */
     async disconnect(name) {
         let msg = {
-            type: 'disconnect',
+            type: FakePlayerController.OperationType.Disconnect,
             data: {
                 name: name,
             }
@@ -2027,11 +1854,11 @@ class AsyncFakePlayerWebSocketController {
     /**
      * 连接假人
      * @param {string} name 假人名称
-     * @returns {Promise<{name: string, success: boolean, resaon: string?}>} 返回结果
+     * @returns {Promise<{name:string, success:boolean, resaon: string?}>} 返回结果
      */
     async connect(name) {
         let msg = {
-            type: 'connect',
+            type: FakePlayerController.OperationType.Connect,
             data: {
                 name: name,
             }
@@ -2046,7 +1873,7 @@ class AsyncFakePlayerWebSocketController {
     async removeAll() {
         this.removeAllAllowList();
         let msg = {
-            type: 'remove_all',
+            type: FakePlayerController.OperationType.RemoveAll,
         }
         const { type, data: { list } } = await this.send(msg);
         return list;
@@ -2057,7 +1884,7 @@ class AsyncFakePlayerWebSocketController {
      */
     async connectAll() {
         let msg = {
-            type: 'connect_all',
+            type: FakePlayerController.OperationType.ConnectAll,
         }
         const { type, data: { list } } = await this.send(msg);
         return list;
@@ -2068,7 +1895,7 @@ class AsyncFakePlayerWebSocketController {
      */
     async disconnectAll() {
         let msg = {
-            type: 'disconnect_all',
+            type: FakePlayerController.OperationType.DisconnectAll,
         }
         const { type, data: { list } } = await this.send(msg);
         return list;
@@ -2077,11 +1904,11 @@ class AsyncFakePlayerWebSocketController {
      * 设置假人聊天控制
      * @param {string} name 假人名称
      * @param {boolean} allowChatControl 是否允许聊天控制
-     * @returns {Promise<{name: string, success: boolean, resaon: string}>} 返回结果
+     * @returns {Promise<{name:string, success:boolean, resaon: string}>} 返回结果
      */
     async setChatControl(name, allowChatControl) {
         let msg = {
-            type: 'setChatControl',
+            type: FakePlayerController.OperationType.SetChatControl,
             data: {
                 name: name,
                 allowChatControl: allowChatControl,
@@ -2124,35 +1951,35 @@ if (ENABLE_CHAT_CONTROL) {
         }
         version() {
             waitingMsgCallbacks.set(this.name, (msg) => {
-                debug(`${this.name} version: ${msg}`);
+                if (Settings.debugMode) debug(`${this.name} version: ${msg}`);
                 return true;
             });
             this.player.talkTo(this.target, `${this.targetName} version`);
         }
         help() {
             waitingMsgCallbacks.set(this.name, (msg) => {
-                debug(`${this.name} help: ${msg}`);
+                if (Settings.debugMode) debug(`${this.name} help: ${msg}`);
                 return true;
             });
             this.player.talkTo(this.target, `${this.targetName} help`);
         }
         getPos() {
             waitingMsgCallbacks.set(this.name, (msg) => {
-                debug(`${this.name} getPos: ${msg}`);
+                if (Settings.debugMode) debug(`${this.name} getPos: ${msg}`);
                 return true;
             });
             this.player.talkTo(this.target, `${this.targetName} getPos`);
         }
         getInventory() {
             waitingMsgCallbacks.set(this.name, (msg) => {
-                debug(`${this.name} getInventory: ${msg}`);
+                if (Settings.debugMode) debug(`${this.name} getInventory: ${msg}`);
                 return true;
             });
             this.player.talkTo(this.target, `${this.targetName} getInventory`);
         }
         getSelectedSlot() {
             waitingMsgCallbacks.set(this.name, (msg) => {
-                debug(`${this.name} getSelectedSlot: ${msg}`);
+                if (Settings.debugMode) debug(`${this.name} getSelectedSlot: ${msg}`);
                 return true;
             });
             this.player.talkTo(this.target, `${this.targetName} getSelectedSlot`);
@@ -2177,8 +2004,4 @@ if (ENABLE_CHAT_CONTROL) {
     }
 }
 
-module.exports;
-exports.FakePlayerManager = FakePlayerManager;
-// exports.FakePlayerChatController = FakePlayerChatController;
-exports.FakePlayer = FakePlayer;
-exports.FakePlayerWebSocketController = FakePlayerWebSocketController;
+module.exports = { FakePlayerManager, FakePlayer, FakePlayerWebSocketController };

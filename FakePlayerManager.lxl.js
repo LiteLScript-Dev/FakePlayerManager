@@ -1,8 +1,11 @@
+"use strict";
+/* eslint-disable no-unused-vars */
+/* eslint-disable no-undef */
 
 // /\*\*\n     \* (.*)\n     \*/
 // /** $1 */
 
-const VERSION = [1, 1, 1];
+const VERSION = [1, 2, 0];
 const IS_BETA = false;
 const AUTHOR = "xiaoqch";
 const VERSION_STRING = VERSION.join(".") + (IS_BETA ? " Beta" : "");
@@ -11,15 +14,37 @@ const PLUGIN_DESCRIPTION_KEY = "plugin.description";
 const GITHUB_URL = "https://github.com/LiteLScript-Dev/FakePlayerManager"
 const CURRENT_CONFIG_VERSION = 1;
 
-const PluginDir = `plugins/${PLUGIN_NAME}/`;
-const LanguageDir = `${PluginDir}Language/`;
-const LangHelperPath = `${PluginDir}LangHelper.js`;
-const FakePlayerControllerPath = `${PluginDir}FakePlayerController.js`;
-const _ConfigFile = `${PluginDir}config.json`;
+function pathJoin(...paths) {
+    const sep = '/';
+    const result = paths.reduce((acc, cur) => {
+        if (cur.indexOf('.') == -1 && !cur.endsWith(sep)) {
+            cur = cur + sep;
+        }
+        if (cur.startsWith(sep)) {
+            return cur;
+        }
+        if (acc.endsWith(sep)) {
+            return acc + cur;
+        }
+        if (acc == '' || acc == '.') {
+            return cur;
+        }
+        return acc + sep + cur;
+    }, '');
+    return result;
+}
+const PluginsDir = `plugins/`
+const PluginDir = pathJoin(PluginsDir, PLUGIN_NAME);
+const LanguageDir = pathJoin(PluginDir, 'Language');
+const LangHelperPath = pathJoin(PluginDir, 'LangHelper.js');
+const FakePlayerControllerPath = pathJoin(PluginDir, 'FakePlayerController.js');
+const _ConfigFile = pathJoin(PluginDir, 'config.json');
 
 const ENABLE_CHAT_CONTROL = false;
 
 logger.setTitle(PLUGIN_NAME);
+
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // 颜色转换映射表
 const colorMap = {
@@ -246,17 +271,19 @@ if (Settings.configVersion != CURRENT_CONFIG_VERSION || needUpdate) {
         logger.info("Update config file because missing some settings.");
     else
         logger.info(`Update config file from version ${Settings.configVersion} to ${CURRENT_CONFIG_VERSION}.`);
+
+    /**
+     * @type {Map<String, String>} 语言代码兼容表
+     */
+    const langCodeCompatible = {
+        'cn': 'zh_CN',
+        'en': 'en_US',
+    }
     switch (Settings.configVersion) {
         case 0: // 1.0.0
-            /**
-             * @type {Map<String, String>} 语言代码兼容表
-             */
-            const langCodeCompatible = {
-                'cn': 'zh_CN',
-                'en': 'en_US',
-            }
             Settings.language = langCodeCompatible[Settings.language] ?? Settings.language;
             file.delete(`${PluginDir}lang.json`);
+        // eslint-disable-next-line no-fallthrough
         default:
             break;
     }
@@ -270,7 +297,15 @@ if (Settings.configVersion != CURRENT_CONFIG_VERSION || needUpdate) {
 }
 conf.close();
 
-debug(`Settings: ${JSON.stringify(Settings)}`);
+if (IS_BETA || Settings.debugMode) {
+    Settings.debugMode = true;
+    debug(`Settings: ${JSON.stringify(Settings)}`);
+    logger.setTitle(`${PLUGIN_NAME}_${Color.transformToConsole(Color.yellow("DEV"))}`);
+    wait(0).then(() => logger.setTitle(`${PLUGIN_NAME}_${Color.transformToConsole(Color.yellow("DEV"))}`));
+    logger.success = (...args) => logger.info(...args.map(arg => Color.transformToConsole(Color.green(arg))));
+    logger.error = (...args) => logger.info(...args.map(arg => Color.transformToConsole(Color.red(arg))));
+    logger.warn = (...args) => logger.info(...args.map(arg => Color.transformToConsole(Color.yellow(arg))));
+}
 
 
 ///////////////////////////////////// Global /////////////////////////////////////
@@ -291,7 +326,7 @@ var Global = {
     fpc: null,
 };
 
-const { FakePlayerWebSocketController, FakePlayerManager, FakePlayer} = require(FakePlayerControllerPath);
+const { FakePlayerWebSocketController, FakePlayerManager, FakePlayer } = require(FakePlayerControllerPath);
 
 //////////////////////////////////// Translations ////////////////////////////////////
 // 额外的函数以防止传回来值类型变成Object(未知原因)
@@ -314,9 +349,28 @@ function trError(_key, ..._args) {
 function trInfo(_key, ..._args) {
     logger.info(Color.transformToConsole(tr(...arguments)));
 }
+function logError(msg, e, player) {
+    let errorMessage = null;
+    let stack = null;
+    if (e instanceof Error) {
+        errorMessage = e.message;
+        stack = e.stack;
+    } else if (typeof (e) == "string") {
+        errorMessage = e;
+    } else {
+        errorMessage = JSON.stringify(e);
+    }
+    if (player) {
+        player.tell(`${Color.RED}${msg}: ${errorMessage}`);
+    }
+    logger.error(`${msg}: ${errorMessage}`);
+    if (stack) {
+        logger.error(stack);
+    }
+}
 
-function yellowExclude(str, chr = '/'){
-    return str.split(chr).map(s=>Color.yellow(s)).join(chr);
+function yellowExclude(str, chr = '/') {
+    return str.split(chr).map(s => Color.yellow(s)).join(chr);
 }
 
 const fpmHelpText = `
@@ -347,26 +401,31 @@ ${Color.green("fpg")} ${yellowExclude("a/agent")} - ${Color.lightPurple(tr("help
 
 
 mc.listen("onServerStarted", function () {
-    setTimeout(() => {
+    wait(0).then(() => {
         Global.fpc = new FakePlayerWebSocketController(Settings.wsurl, Settings.port);
         Global.fpm = new FakePlayerManager(Global.fpc);
         fpm = Global.fpm;
         fpc = Global.fpc;
-    }, 100);
+    }).catch(err => {
+        logger.error("FakePlayerManager init failed: " + err);
+    });
 });
 
 //////////////////////////////// Command ////////////////////////////////
+/** @type {FakePlayerManager} 模拟玩家管理器 */
 let fpm = Global.fpm;
+/** @type {FakePlayerWebSocketController} 模拟玩家控制器 */
 let fpc = Global.fpc;
 
 function sendHelpForm(player) {
     let helpForm = mc.newSimpleForm();
     helpForm.setTitle(tr('help.fpg.title') + ' - ' + VERSION_STRING);
     helpForm.setContent(fpgHelpText);
-    player.sendForm(helpForm, _ => { });
+    player.sendForm(helpForm, () => { });
 }
 
 function openGUI(player, formType) {
+    let error = '';
     switch (formType.toLowerCase()) {
         case 'h':
         case 'help':
@@ -424,49 +483,82 @@ function logResponse(response, plName) {
     }
 }
 
+function logResponseData(type, data, plName) {
+    let str = fpc.getResDataStr(type, data);
+    let pl = plName ? mc.getPlayer(plName) : null;
+    if (pl) {
+        pl.tell(str);
+    } else {
+        Color.transformToConsole(str).split('\n').forEach(s => logger.info(s));
+    }
+}
+
+function onCmdError(e, plName = null) {
+    logError("Error in command", e, plName);
+}
+
+/**
+ * 处理指令内容
+ * @param {string[]}} args 指令参数
+ * @param {Player} player 执行指令的玩家
+ */
 function handleCmd(args, player = null) {
+    if (Settings.debugMode) debug(`handleCmd: ${args} by ${player ? player.name : 'console'}`);
     let plName = player ? player.name : null
     switch (args[0]) {
         case 'l':
         case 'list':
-            fpm.controller.list(callback = response => logResponse(response, plName));
+            fpc.list()
+                .then(data => logResponseData('list', data, plName))
+                .catch(err => onCmdError(err, plName));
             break;
         case 'a':
-        case 'add':
+        case 'add': {
             let fp = new FakePlayer(fpc, args[1]);
-            // fp.controller=fpc;
-            // fp.name=args[1];
-            if (args.hasOwnProperty(2)) fp.allowChatControl = args[2];
-            if (args.hasOwnProperty(3)) fp.skin = args[3];
-            fp.add(response => logResponse(response, plName));
+            if (args.length > 1) fp.allowChatControl = args[2];
+            if (args.length > 2) fp.skin = args[3];
+            fp.add().then(data => logResponseData('add', data, plName));
             // if (player) tpQuery[args[1]] = player.pos;
             break;
+        }
         case 'r':
         case 'remove':
-            fpm.controller.remove(args[1], callback = response => logResponse(response, plName));
+            fpc.remove(args[1])
+                .then(data => logResponseData('remove', data, plName))
+                .catch(err => onCmdError(err, plName));
             break;
         case 's':
         case 'state':
-            fpm.controller.getState(args[1], callback = response => logResponse(response, plName));
+            fpc.getState(args[1])
+                .then(data => logResponseData('getState', data, plName))
+                .catch(err => onCmdError(err, plName));
             break;
         case 'sa':
         case 'stateAll':
         case 'ls':
         case 'listState':
-            fpm.controller.getAllState(callback = response => logResponse(response, plName));
+            fpc.getAllState()
+                .then(data => logResponseData('getState_all', data, plName))
+                .catch(err => onCmdError(err, plName));
             break;
         case 'd':
         case 'disconnect':
-            fpm.controller.disconnect(args[1], callback = response => logResponse(response, plName));
+            fpc.disconnect(args[1])
+                .then(data => logResponseData('disconnect', data, plName))
+                .catch(err => onCmdError(err, plName));
             break;
         case 'c':
         case 'connect':
-            fpm.controller.connect(args[1], callback = response => logResponse(response, plName));
+            fpc.connect(args[1])
+                .then(data => logResponseData('connect', data, plName))
+                .catch(err => onCmdError(err, plName));
             break;
         case 'ra':
         case 'removeAll':
-            if (allowRemoveAll)
-                fpm.controller.removeAll(callback = response => logResponse(response, plName));
+            if (Settings.allowRemoveAll)
+                fpc.removeAll()
+                    .then(data => logResponseData('remove_all', data, plName))
+                    .catch(err => onCmdError(err, plName));
             else {
                 let msg = tr('command.remove.disable');
                 if (player) player.tell(msg);
@@ -475,15 +567,21 @@ function handleCmd(args, player = null) {
             break;
         case 'ca':
         case 'connectAll':
-            fpm.controller.connectAll(callback = response => logResponse(response, plName));
+            fpc.connectAll()
+                .then(data => logResponseData('connect_all', data, plName))
+                .catch(err => onCmdError(err, plName));
             break;
         case 'da':
         case 'disconnectAll':
-            fpm.controller.disconnectAll(callback = response => logResponse(response, plName));
+            fpc.disconnectAll()
+                .then(data => logResponseData('disconnect_all', data, plName))
+                .catch(err => onCmdError(err, plName));
             break;
         case 'sc':
         case 'setControl':
-            fpm.controller.setChatControl(args[1], args[2], callback = response => logResponse(response, plName));
+            fpc.setChatControl(args[1], args[2])
+                .then(data => logResponseData('setChatControl', data, plName))
+                .catch(err => onCmdError(err, plName));
             break;
         case '?':
         case 'h':
@@ -499,10 +597,11 @@ function handleCmd(args, player = null) {
             }
             else trError('command.only_player');
             break;
-        default:
+        default: {
             let msg = tr('command.unknown');
             if (player) player.tell(msg);
             else logger.error(msg);
+        }
     }
 }
 
@@ -514,9 +613,9 @@ mc.regConsoleCmd('fpm', tr('command.fpm.description'), function (args) {
     handleCmd(args);
 });
 
-///////////////////////////////////// Test //////////////////////////////////////
+///////////////////////////////////// Self Test //////////////////////////////////////
 if (Settings.debugMode) {
-    logger.warn('Debug mode is on. Please use this mode only for testing.');
+    logger.success('Debug mode is on. Please use this mode only for testing.');
     // 测试所有语言的本地化键名一致
     let langKeys = {};
     file.getFilesList(LanguageDir).forEach(fileName => {
@@ -537,10 +636,146 @@ if (Settings.debugMode) {
         if (missingKeys.length > 0) {
             logger.error('Language file ' + lang + ' is missing keys: ' + missingKeys.join(', '));
         } else {
-            logger.info(Color.transformToConsole(`${Color.GREEN}Language file ${lang} is complete.${Color.RESET}`));
+            logger.success(`Language file ${lang} is OK.`)
         }
     }
 }
+
+///////////////////////////////////// Export APIs //////////////////////////////////////
+const FPM_API_PREFIX = "FakePlayerManagerAPI";
+/**
+ * 导出 FakePlayerManager API
+ * @param {string} name API名称
+ * @param {(...args: any[]) => any} func API函数 
+ */
+function fpmExport(name, func) {
+    if (func) {
+        if (Settings.debugMode) logger.info(`Export FakePlayerManager API: ${name}`);
+        lxl.export(func, `${FPM_API_PREFIX}_${name}`);
+    } else {
+        throw new Error('API function is null');
+    }
+}
+
+let asyncCallbacks = {};
+fpmExport("registerAsync", (name, resolveName, rejectName) => {
+    if (Settings.debugMode) logger.info(`registerAsync: ${name}`);
+    if (!resolveName) resolveName = `${name}_resolve`;
+    if (!rejectName) rejectName = `${name}_reject`;
+    if (!asyncCallbacks[name]) {
+        asyncCallbacks[name] = {
+            resolve: lxl.import(resolveName),
+            reject: lxl.import(rejectName),
+        };
+    }
+});
+/**
+ * @param {Error|string} err 错误
+ * @returns {{name: string, message: string, stack: string}} object 类型的错误
+ */
+function error2obj(err) {
+    let errorObj = {}
+    if (typeof err === 'object') {
+        if (err instanceof Error) {
+            errorObj = { name: err.name, message: err.message, stack: err.stack };
+        } else {
+            errorObj = {
+                name: Object.prototype.hasOwnProperty.call(err, 'name') ? err.name : "UnknownError",
+                message: Object.prototype.hasOwnProperty.call(err, 'message') ? err.message : JSON.stringify(err),
+                stack: Object.prototype.hasOwnProperty.call(err, 'stack') ? err.stack : err,
+            };
+        }
+    } else if (typeof err === 'string') {
+        errorObj = { name: "UnknownError", message: err, stack: err };
+    }
+    return errorObj;
+}
+/**
+ * 
+ * @param {(...args: any[]) => any} fn 
+ * @returns {(callback: (...args: any[]?) => void, ...args: any[]) => boolean}
+ */
+function async_to_sync(fn) {
+    /**
+     * @param {(...args: any[]) => any} resolve
+     * @param {(...args: any[]) => any} reject
+     * @param {...any[]} args
+     * @returns {boolean} whether the callback is called
+     */
+    return (name, id, ...args) => {
+        try {
+            fn(...args).then(res => {
+                asyncCallbacks[name].resolve(id, res);
+            }).catch(err => {
+                asyncCallbacks[name].reject(id, error2obj(err));
+            });
+            return true;
+        } catch (err) {
+            asyncCallbacks[name].reject(id, error2obj(err));
+            return false;
+        }
+    };
+}
+function fpmExportAsync(name, func) {
+    fpmExport(`async_${name}`, async_to_sync(func));
+}
+
+fpmExportAsync('list', async () => {
+    if (!fpc) await wait(200);
+    return fpc.list();
+});
+fpmExportAsync('add', async (name, allowChatControl, skin) => {
+    if (!fpm.ready)
+        await fpm.refreshData();
+    return fpc.add(name, allowChatControl, skin);
+});
+fpmExportAsync('connect', async (name) => {
+    if (!fpc) await wait(200);
+    return fpc.connect(name);
+});
+fpmExportAsync('disconnect', async (name) => {
+    if (!fpc) await wait(200);
+    return fpc.disconnect(name);
+});
+fpmExportAsync('getState', async (name) => {
+    if (!fpc) await wait(200);
+    return fpc.getState(name);
+});
+fpmExportAsync('getAllState', async () => {
+    if (!fpc) await wait(200);
+    return fpc.getAllState();
+});
+fpmExportAsync('remove', async (name) => {
+    if (!fpc) await wait(200);
+    return fpc.remove(name);
+});
+fpmExportAsync('removeAll', async () => {
+    if (!fpc) await wait(200);
+    return fpc.removeAll();
+});
+fpmExportAsync('connectAll', async () => {
+    if (!fpc) await wait(200);
+    return fpc.connectAll();
+});
+fpmExportAsync('disconnectAll', async () => {
+    if (!fpc) await wait(200);
+    return fpc.disconnectAll();
+});
+fpmExportAsync('setChatControl', async (name, control) => {
+    if (!fpc) await wait(200);
+    return fpc.setChatControl(name, control);
+});
+fpmExport('isReady', () => {
+
+    return fpc && fpc.ready;
+});
+fpmExportAsync('reconnect', async () => {
+    if (!fpc) await wait(200);
+    return fpc.connectWebSocket();
+});
+fpmExport('version', () => {
+    return VERSION;
+});
 
 //////////////////////////////////// Finished ////////////////////////////////////
 
@@ -549,5 +784,5 @@ ll.registerPlugin(PLUGIN_NAME, tr(PLUGIN_DESCRIPTION_KEY), VERSION,
         "Author": AUTHOR,
         "Github": GITHUB_URL,
     });
-    
-trInfo('plugin.loaded', `${Color.GREEN}${PLUGIN_NAME}${Color.RESET}`, VERSION_STRING, AUTHOR);
+
+trInfo('plugin.loaded', `${Color.green(PLUGIN_NAME)}`, VERSION_STRING, AUTHOR);
