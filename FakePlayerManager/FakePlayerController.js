@@ -1728,7 +1728,7 @@ class FakePlayerWebSocketController extends FakePlayerController {
         if (!this.ready) {
             if (!await this.connectWebsocket()) {
                 if (Settings.debugMode) logError("Error in send msg", msg);
-                new Error(tr("ws.error.send", { code: this.wsc.errorCode() }));
+                throw new Error(tr("ws.error.send", { code: this.wsc.errorCode() }));
             }
         }
         return new Promise((resolve, reject) => {
