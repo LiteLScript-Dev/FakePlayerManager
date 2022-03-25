@@ -896,6 +896,9 @@ class FakePlayerFormHelper {
                 this.tell(this.OPERATIONS.Cancel);
             return;
         }
+        if(!this.manager.ready){
+            throw new Error('FakePlayerManager is not ready');
+        }
         let msg;
         switch (menus[id]) {
             case FORM_MENU.Agent:
@@ -1092,9 +1095,11 @@ class FakePlayerManager {
         });
     }
     sendMenuForm(player) {
-        this.refreshData();
-        let fh = new FakePlayerFormHelper(this, player);
-        fh.sendMenuForm().catch(e => {
+        (async () => {
+            this.refreshData();
+            let fh = new FakePlayerFormHelper(this, player);
+            await fh.sendMenuForm();
+        })().catch(e => {
             logError('sendMenuForm', e, player);
         });
     }
@@ -1723,7 +1728,7 @@ class FakePlayerWebSocketController extends FakePlayerController {
         if (!this.ready) {
             if (!await this.connectWebsocket()) {
                 if (Settings.debugMode) logError("Error in send msg", msg);
-                throw new Error(tr("ws.error.send", { code: this.wsc.errorCode() }));
+                new Error(tr("ws.error.send", { code: this.wsc.errorCode() }));
             }
         }
         return new Promise((resolve, reject) => {

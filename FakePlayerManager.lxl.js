@@ -350,22 +350,30 @@ function trInfo(_key, ..._args) {
     logger.info(Color.transformToConsole(tr(...arguments)));
 }
 function logError(msg, e, player) {
-    let errorMessage = null;
-    let stack = null;
-    if (e instanceof Error) {
-        errorMessage = e.message;
-        stack = e.stack;
-    } else if (typeof (e) == "string") {
-        errorMessage = e;
-    } else {
-        errorMessage = JSON.stringify(e);
-    }
-    if (player) {
-        player.tell(`${Color.RED}${msg}: ${errorMessage}`);
-    }
-    logger.error(`${msg}: ${errorMessage}`);
-    if (stack) {
-        logger.error(stack);
+    try{
+        let errorMessage = null;
+        let stack = null;
+        if (e instanceof Error) {
+            errorMessage = e.message;
+            stack = e.stack;
+        } else if (typeof (e) == "string") {
+            errorMessage = e;
+        } else {
+            errorMessage = JSON.stringify(e);
+        }
+        if (player) {
+            if(typeof player == "string")
+                player = mc.getPlayer(player);
+            if(player)
+                player.tell(`${Color.RED}${msg}: ${errorMessage}`);
+        }
+        logger.error(`${msg}: ${errorMessage}`);
+        if (stack) {
+            logger.error(stack);
+        }
+    }catch(e){
+        logger.error(`[logError] ${e.message}`);
+        logger.error(`[logError] ${e.stack}`);
     }
 }
 
