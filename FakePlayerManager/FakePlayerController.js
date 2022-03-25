@@ -1073,7 +1073,7 @@ class FakePlayerManager {
                 this.refreshData();
             }
             let fh = new FakePlayerFormHelper(this, player);
-            await fh.sendAgentForm();
+            await fh.sendQuickForm();
         })().catch(e => {
             logError('sendQuickForm', e, player);
         });
@@ -1114,7 +1114,7 @@ class FakePlayerManager {
     sendAddForm(player) {
         let fh = new FakePlayerFormHelper(this, player);
         fh.sendAddForm().catch(e => {
-            logError('sendMenuForm', e, player);
+            logError('sendAddForm', e, player);
         });
     }
     sendTeleportForm(player) {
@@ -1517,7 +1517,7 @@ class FakePlayerWebSocketController extends FakePlayerController {
             // 假装异步来统一 api
             return new Promise((resolve, reject) => {
                 let result = this.wsc.connect(this.wsAddress);
-                this.ready = success;
+                this.ready = result;
                 resolve(result);
             });
         }
