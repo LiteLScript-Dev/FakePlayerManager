@@ -9,6 +9,10 @@
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// Compatible with new version
+if(LXL_SimpleForm == undefined)
+    var LXL_SimpleForm = LLSE_SimpleForm;
+
 ////////////////////////////////// Global Config /////////////////////////////////
 const lastestOnlineTimePath = `${PluginDir}/lastOnlineTimes.json`;
 
@@ -1728,7 +1732,7 @@ class FakePlayerWebSocketController extends FakePlayerController {
         if (!this.ready) {
             if (!await this.connectWebsocket()) {
                 if (Settings.debugMode) logError("Error in send msg", msg);
-                throw new Error(tr("ws.error.send", { code: this.wsc.errorCode() }));
+                new Error(tr("ws.error.send", { code: this.wsc.errorCode() }));
             }
         }
         return new Promise((resolve, reject) => {
