@@ -2,9 +2,6 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 
-// /\*\*\n     \* (.*)\n     \*/
-// /** $1 */
-
 ///////////////////////////////////// Compatibility /////////////////////////////////////
 if (LLSE_SimpleForm === undefined)
     var LLSE_SimpleForm = LXL_SimpleForm;
