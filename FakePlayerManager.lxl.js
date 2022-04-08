@@ -44,6 +44,7 @@ const PluginsDir = `plugins/`
 const PluginDir = pathJoin(PluginsDir, PLUGIN_NAME);
 const LanguageDir = pathJoin(PluginDir, 'Language');
 const LangHelperPath = pathJoin(PluginDir, 'LangHelper.js');
+const PluginLogPath = `logs/${PLUGIN_NAME}.log`
 const FakePlayerControllerPath = pathJoin(PluginDir, 'FakePlayerController.js');
 const _ConfigFile = pathJoin(PluginDir, 'config.json');
 
@@ -306,6 +307,7 @@ conf.close();
 
 if (IS_BETA || Settings.debugMode) {
     Settings.debugMode = true;
+    logger.setFile(PluginLogPath)
     debug(`Settings: ${JSON.stringify(Settings)}`);
     logger.setTitle(`${PLUGIN_NAME}_${Color.transformToConsole(Color.yellow("DEV"))}`);
     wait(0).then(() => logger.setTitle(`${PLUGIN_NAME}_${Color.transformToConsole(Color.yellow("DEV"))}`));
@@ -791,6 +793,12 @@ fpmExportAsync('reconnect', async () => {
 fpmExport('version', () => {
     return VERSION;
 });
+
+if (Settings.debugMode) {
+    lxl.export(() => {
+        return 'FakePlayerManagerAPI';
+    }, 'FPM_API_NAME');
+}
 
 //////////////////////////////////// Finished ////////////////////////////////////
 
