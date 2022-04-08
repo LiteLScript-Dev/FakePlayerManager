@@ -1508,24 +1508,14 @@ class FakePlayerWebSocketController extends FakePlayerController {
     async connectWebsocket() {
         if (this.ready)
             return true;
-
-        if (this.wsc.connectAsync) {
-            return new Promise((resolve, reject) => {
-                let result = this.wsc.connectAsync(this.wsAddress, (success) => {
-                    this.ready = success;
-                    resolve(success);
-                });
-                if (!result)
-                    reject(new Error(`Fail to connect to ${this.wsAddress}`));
-            });
-        } else {
-            // 假装异步来统一 api
-            return new Promise((resolve, reject) => {
-                let result = this.wsc.connect(this.wsAddress);
-                this.ready = result;
-                resolve(result);
-            });
-        }
+		return new Promise((resolve, reject) => {
+			let result = this.wsc.connectAsync(this.wsAddress, (success) => {
+				this.ready = success;
+				resolve(success);
+			});
+			if (!result)
+				reject(new Error(`Fail to connect to ${this.wsAddress}`));
+		});
     }
 
     /**

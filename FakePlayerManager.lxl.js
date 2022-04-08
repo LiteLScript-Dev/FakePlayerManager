@@ -5,13 +5,20 @@
 // /\*\*\n     \* (.*)\n     \*/
 // /** $1 */
 
-// Compatible
-if(LLSE_SimpleForm === undefined)
+///////////////////////////////////// Compatibility /////////////////////////////////////
+if (LLSE_SimpleForm === undefined)
     var LLSE_SimpleForm = LXL_SimpleForm;
-if(ll === undefined)
+if (ll === undefined)
     var ll = lxl;
-if(ll.prototype.registerPlugin === undefined)
-    var ll.prototype.registerPlugin = ()=>{};
+if (!ll.registerPlugin)
+    ll.registerPlugin = () => { };
+if (!WSClient.prototype.hasOwnProperty("connectAsync"))
+    WSClient.prototype.connectAsync = function (address, callback) {
+        // 假装异步
+        let result = this.connect(address);
+        callback(result);
+        return result;
+    }
 
 const VERSION = [1, 2, 2];
 const IS_BETA = false;
@@ -360,7 +367,7 @@ function trInfo(_key, ..._args) {
     logger.info(Color.transformToConsole(tr(...arguments)));
 }
 function logError(msg, e, player) {
-    try{
+    try {
         let errorMessage = null;
         let stack = null;
         if (e instanceof Error) {
@@ -372,16 +379,16 @@ function logError(msg, e, player) {
             errorMessage = JSON.stringify(e);
         }
         if (player) {
-            if(typeof player == "string")
+            if (typeof player == "string")
                 player = mc.getPlayer(player);
-            if(player)
+            if (player)
                 player.tell(`${Color.RED}${msg}: ${errorMessage}`);
         }
         logger.error(`${msg}: ${errorMessage}`);
         if (stack) {
             logger.error(stack);
         }
-    }catch(e){
+    } catch (e) {
         logger.error(`[logError] ${e.message}`);
         logger.error(`[logError] ${e.stack}`);
     }
