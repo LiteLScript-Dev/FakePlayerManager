@@ -9,10 +9,6 @@
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// Compatible with new version
-if(LXL_SimpleForm == undefined)
-    var LXL_SimpleForm = LLSE_SimpleForm;
-
 ////////////////////////////////// Global Config /////////////////////////////////
 const lastestOnlineTimePath = `${PluginDir}/lastOnlineTimes.json`;
 
@@ -505,7 +501,7 @@ class FakePlayerFormHelper {
                 let res = this.player.sendForm(form, (player, dataOrId) => {
                     // 输出 dataOrId 的实例类型
                     if (Settings.debugMode) debug(form.constructor.name);
-                    if (form instanceof LXL_SimpleForm) {
+                    if (form instanceof LLSE_SimpleForm) {
                         if (Settings.debugMode) debug(`${this.name} send form ${form.constructor.name} id: ${dataOrId}`);
                         resolve({ player, id: dataOrId });
                     } else {

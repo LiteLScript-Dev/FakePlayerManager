@@ -5,7 +5,14 @@
 // /\*\*\n     \* (.*)\n     \*/
 // /** $1 */
 
-const VERSION = [1, 2, 0];
+// Compatible
+
+if(LLSE_SimpleForm == undefined)
+    var LLSE_SimpleForm = LXL_SimpleForm;
+if(ll == undefined)
+    var ll = lxl;
+
+const VERSION = [1, 2, 2];
 const IS_BETA = false;
 const AUTHOR = "xiaoqch";
 const VERSION_STRING = VERSION.join(".") + (IS_BETA ? " Beta" : "");
