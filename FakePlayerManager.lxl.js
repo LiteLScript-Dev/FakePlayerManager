@@ -6,11 +6,12 @@
 // /** $1 */
 
 // Compatible
-
-if(LLSE_SimpleForm == undefined)
+if(LLSE_SimpleForm === undefined)
     var LLSE_SimpleForm = LXL_SimpleForm;
-if(ll == undefined)
+if(ll === undefined)
     var ll = lxl;
+if(ll.prototype.registerPlugin === undefined)
+    var ll.prototype.registerPlugin = ()=>{};
 
 const VERSION = [1, 2, 2];
 const IS_BETA = false;
@@ -307,7 +308,7 @@ conf.close();
 
 if (IS_BETA || Settings.debugMode) {
     Settings.debugMode = true;
-    logger.setFile(PluginLogPath)
+    logger.setFile(PluginLogPath);
     debug(`Settings: ${JSON.stringify(Settings)}`);
     logger.setTitle(`${PLUGIN_NAME}_${Color.transformToConsole(Color.yellow("DEV"))}`);
     wait(0).then(() => logger.setTitle(`${PLUGIN_NAME}_${Color.transformToConsole(Color.yellow("DEV"))}`));
