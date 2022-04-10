@@ -70,6 +70,7 @@ This plugin is a FakePlayer management plugin with GUI interface, supports [Fake
     "debugMode": false,         // debug mode
     "color": true,              // global color switch
     "consoleColor": true,       // Console color switch
+    "autoCheckUpdate": true     // Automatic check update
 }
 ```
 

@@ -1,6 +1,7 @@
 "use strict";
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
+// Author xiaoqch
 
 ///////////////////////////////////// Compatibility /////////////////////////////////////
 if (LLSE_SimpleForm === undefined)
@@ -21,6 +22,8 @@ if (!WSClient.prototype.hasOwnProperty("connectAsync"))
         return result;
     }
 
+
+///////////////////////////////////// Info /////////////////////////////////////
 const VERSION = [1, 2, 3];
 const IS_BETA = false;
 const AUTHOR = "xiaoqch";
@@ -62,6 +65,7 @@ const _ConfigFile = pathJoin(PluginDir, 'config.json');
 const ENABLE_CHAT_CONTROL = false;
 
 logger.setTitle(PLUGIN_NAME);
+logger.setFile(PluginLogPath, 3 /* Warn */);
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -270,9 +274,9 @@ var Settings = {
      */
     consoleColor: true,
     /**
-     * @type {Boolean} 是否检查更新
+     * @type {Boolean} 是否自动检查更新
      */
-    checkUpdate: true,
+     autoCheckUpdate: true,
 }
 /**
  * @type {Conf} 配置文件
@@ -322,10 +326,10 @@ conf.close();
 
 if (IS_BETA || Settings.debugMode) {
     Settings.debugMode = true;
-    logger.setFile(PluginLogPath);
     debug(`Settings: ${JSON.stringify(Settings)}`);
+    logger.setFile(PluginLogPath, 4 /* Info */);
     logger.setTitle(`${PLUGIN_NAME}_${Color.transformToConsole(Color.yellow("DEV"))}`);
-    wait(0).then(() => logger.setTitle(`${PLUGIN_NAME}_${Color.transformToConsole(Color.yellow("DEV"))}`));
+    wait(50).then(() => logger.setTitle(`${PLUGIN_NAME}_${Color.transformToConsole(Color.yellow("DEV"))}`));
     logger.success = (...args) => logger.info(...args.map(arg => Color.transformToConsole(Color.green(arg))));
     logger.error = (...args) => logger.info(...args.map(arg => Color.transformToConsole(Color.red(arg))));
     logger.warn = (...args) => logger.info(...args.map(arg => Color.transformToConsole(Color.yellow(arg))));
@@ -353,12 +357,13 @@ var Global = {
 const { FakePlayerWebSocketController, FakePlayerManager, FakePlayer } = require(FakePlayerControllerPath);
 
 //////////////////////////////////// Check Update ////////////////////////////////////
-if (Settings.checkUpdate) {
+if (Settings.autoCheckUpdate) {
     if(!File.exists(UpdateManagerPath))
         logger.warn(`[Update] UpdateManager is not found, skip check update.`);
     const { UpdateManager } = require(UpdateManagerPath);
     const updateManager = new UpdateManager(MINE_BBS_RESOURCE_ID, VERSION);
     (async () => {
+        await wait(50);
         while (true) {
             const { success, version } = await updateManager.checkUpdate();
             if (success) {
@@ -366,8 +371,9 @@ if (Settings.checkUpdate) {
                 if (success) {
                     const { title, message, post_date, view_url } = update_info;
                     logger.info(Color.transformToConsole(Color.green(`New Update Found: ${title}`)));
-                    logger.info(message);
-                    logger.info(`Update Time: ${new Date(post_date).toLocaleString()}`);
+                    message.forEach(line => logger.info(line));
+                    const update_time = UpdateManager.getUpdateTimeStr(post_date);
+                    logger.info(`Update Time: ${update_time}`);
                     logger.info(`URL: ${view_url}`);
                     return;
                 }else if(Settings.debugMode){
@@ -462,7 +468,7 @@ ${Color.green("fpg")} ${yellowExclude("a/agent")} - ${Color.lightPurple(tr("help
 
 
 mc.listen("onServerStarted", function () {
-    wait(0).then(() => {
+    wait(50).then(() => {
         Global.fpc = new FakePlayerWebSocketController(Settings.wsurl, Settings.port);
         Global.fpm = new FakePlayerManager(Global.fpc);
         fpm = Global.fpm;

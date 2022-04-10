@@ -1,13 +1,8 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
-// Controller for FakePlayer Manageer
+// Controller for FakePlayer Manager
 // Author xiaoqch
 // Please use this plugin with https://github.com/ddf8196/FakePlayer
-
-//LiteXLoader Dev Helper
-/// <reference path="c:\Users\xiaoqch\.vscode\extensions\moxicat.lxldevhelper-0.1.8/Library/JS/Api.js" /> 
-
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 ////////////////////////////////// Global Config /////////////////////////////////
 const lastestOnlineTimePath = `${PluginDir}/lastOnlineTimes.json`;

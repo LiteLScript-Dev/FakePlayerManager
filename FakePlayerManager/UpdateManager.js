@@ -1,5 +1,36 @@
+//////////////////////////////////// Update Manager ////////////////////////////////////
+// Author: xiaoqch
+// Example:
+//  if (Settings.checkUpdate) {
+//      const UpdateManagerPath = 'FakePlayerManager/UpdateManager.js';
+//      if (!File.exists(UpdateManagerPath))
+//          logger.warn(`[Update] UpdateManager is not found, skip check update.`);
+//      const { UpdateManager } = require(UpdateManagerPath);
+//      const updateManager = new UpdateManager(MINE_BBS_RESOURCE_ID, VERSION);
+//      (async () => {
+//          while (true) {
+//              const { success, version } = await updateManager.checkUpdate();
+//              if (success) {
+//                  const { success, update_info } = await updateManager.getUpdateInfo();
+//                  if (success) {
+//                      const { title, message, post_date, view_url } = update_info;
+//                      logger.info(Color.transformToConsole(Color.green(`New Update Found: ${title}`)));
+//                      logger.info(message);
+//                      logger.info(`Update Time: ${new Date(post_date).toLocaleString()}`);
+//                      logger.info(`URL: ${view_url}`);
+//                      return;
+//                  }
+//              }
+//              await wait(1000 * 60 * 60 * 24);
+//          }
+//      })().catch(e => {
+//          logger.error("Error in CheckUpdate: ");
+//          logger.error(e.stack);
+//      });
+//  }
+
 const MINEBBS_APIS = {
-    getResourceUrl : (resourceId) => `https://api.minebbs.com/api/openapi/v1/resources/${resourceId}`,
+    getResourceUrl: (resourceId) => `https://api.minebbs.com/api/openapi/v1/resources/${resourceId}`,
     getUpdatesUrl: (resourceId) => `https://api.minebbs.com/api/openapi/v1/resources/${resourceId}/updates?page=1`,
 }
 
@@ -21,11 +52,11 @@ const fetch = (url) => {
 class UpdateManager {
     constructor(resource_id, current_version, download_url = null) {
         this.resource_id = resource_id;
-        if(current_version instanceof Array){
+        if (current_version instanceof Array) {
             this.current_version = current_version;
-        }else if(current_version instanceof String){
+        } else if (current_version instanceof String) {
             this.current_version = current_version.split('.');
-        }else{
+        } else {
             throw new Error('current_version must be String or Array');
         }
         this.download_url = download_url;
@@ -33,7 +64,7 @@ class UpdateManager {
     get updates_url() {
         return MINEBBS_APIS.getUpdatesUrl(this.resource_id);
     }
-    get resource_url(){
+    get resource_url() {
         return MINEBBS_APIS.getResourceUrl(this.resource_id);
     }
 
@@ -71,6 +102,13 @@ class UpdateManager {
         const time_str = new Date(post_date).toLocaleString();
         return `New Update Found: ${title}\n${message}\n${time_str}\n${view_url}`;
     }
+
+    static getUpdateTimeStr(post_date) {
+        // YYYY-MM-DD HH:MM:SS
+        const time = new Date(post_date*1000);
+        return `${time.getFullYear()}-${time.getMonth()+1}-${time.getDate()} ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`;
+    }
+
 }
 
 module.exports = { UpdateManager };

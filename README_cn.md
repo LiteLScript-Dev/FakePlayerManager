@@ -69,7 +69,8 @@
     "permissionLevel": 1,       // 指令允许的最低权限等级，0为所有用户，1为管理员
     "debugMode": false,         // 调试模式
     "color": true,              // 全局颜色开关
-    "consoleColor": true        // 控制台颜色开关
+    "consoleColor": true,       // 控制台颜色开关
+    "autoCheckUpdate": true     // 检查更新
 }
 ```
 
