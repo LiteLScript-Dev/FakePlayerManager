@@ -1254,7 +1254,6 @@ class FakePlayerManager {
      * @param {Function} callback 回调函数
      */
     async refreshData() {
-        this.ready = false;
         let data = await this.controller.getAllState();
         this.loadData(data);
         this.ready = true;

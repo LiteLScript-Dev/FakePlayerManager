@@ -7,7 +7,11 @@ if (LLSE_SimpleForm === undefined)
     var LLSE_SimpleForm = LXL_SimpleForm;
 if (ll === undefined)
     var ll = lxl;
-if (!ll.registerPlugin)
+if (File === undefined)
+    var File = file;
+if (WSClient === undefined)
+    var WSClient = LXL_WSClient;
+if (ll.registerPlugin === undefined)
     ll.registerPlugin = () => { };
 if (!WSClient.prototype.hasOwnProperty("connectAsync"))
     WSClient.prototype.connectAsync = function (address, callback) {
@@ -17,7 +21,7 @@ if (!WSClient.prototype.hasOwnProperty("connectAsync"))
         return result;
     }
 
-const VERSION = [1, 2, 2];
+const VERSION = [1, 2, 3];
 const IS_BETA = false;
 const AUTHOR = "xiaoqch";
 const VERSION_STRING = VERSION.join(".") + (IS_BETA ? " Beta" : "");
@@ -25,6 +29,7 @@ const PLUGIN_NAME = "FakePlayerManager";
 const PLUGIN_DESCRIPTION_KEY = "plugin.description";
 const GITHUB_URL = "https://github.com/LiteLScript-Dev/FakePlayerManager"
 const CURRENT_CONFIG_VERSION = 1;
+const MINE_BBS_RESOURCE_ID = 2945;
 
 function pathJoin(...paths) {
     const sep = '/';
@@ -50,6 +55,7 @@ const PluginDir = pathJoin(PluginsDir, PLUGIN_NAME);
 const LanguageDir = pathJoin(PluginDir, 'Language');
 const LangHelperPath = pathJoin(PluginDir, 'LangHelper.js');
 const PluginLogPath = `logs/${PLUGIN_NAME}.log`
+const UpdateManagerPath = pathJoin(PluginDir, 'UpdateManager.js');
 const FakePlayerControllerPath = pathJoin(PluginDir, 'FakePlayerController.js');
 const _ConfigFile = pathJoin(PluginDir, 'config.json');
 
@@ -263,6 +269,10 @@ var Settings = {
      * @type {Boolean} 是否启用控制台颜色
      */
     consoleColor: true,
+    /**
+     * @type {Boolean} 是否检查更新
+     */
+    checkUpdate: true,
 }
 /**
  * @type {Conf} 配置文件
@@ -341,6 +351,35 @@ var Global = {
 };
 
 const { FakePlayerWebSocketController, FakePlayerManager, FakePlayer } = require(FakePlayerControllerPath);
+
+//////////////////////////////////// Check Update ////////////////////////////////////
+if (Settings.checkUpdate) {
+    if(!File.exists(UpdateManagerPath))
+        logger.warn(`[Update] UpdateManager is not found, skip check update.`);
+    const { UpdateManager } = require(UpdateManagerPath);
+    const updateManager = new UpdateManager(MINE_BBS_RESOURCE_ID, VERSION);
+    (async () => {
+        while (true) {
+            const { success, version } = await updateManager.checkUpdate();
+            if (success) {
+                const { success, update_info } = await updateManager.getUpdateInfo();
+                if (success) {
+                    const { title, message, post_date, view_url } = update_info;
+                    logger.info(Color.transformToConsole(Color.green(`New Update Found: ${title}`)));
+                    logger.info(message);
+                    logger.info(`Update Time: ${new Date(post_date).toLocaleString()}`);
+                    logger.info(`URL: ${view_url}`);
+                    return;
+                }else if(Settings.debugMode){
+                    debug(`Current is the latest version.`);
+                }
+            }
+            await wait(1000 * 60 * 60 * 24);
+        }
+    })().catch(e => {
+        logError("Check Update", e);
+    });
+}
 
 //////////////////////////////////// Translations ////////////////////////////////////
 // 额外的函数以防止传回来值类型变成Object(未知原因)
