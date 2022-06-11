@@ -2376,14 +2376,15 @@ class FakePlayerManager {
 
         logger.info('FakePlayerManager controllers status:');
         logger.info(this.getControllerStatus({ console: true, includeDisabled: true }));
-
-        logger.error(new Error("Test Code").stack);
-        const simc = this.getController(SimulatedPlayerController);
-        const llc = this.getController(LLFakePlayerController);
-        const clic = this.getController(WebSocketController);
-        if (simc) simc.add("SimulatedPlayer");
-        if (llc) llc.add("LLFakePlayer");
-        if (clic) clic.add("ClientFakePlayer");
+        if(DEBUG){
+            logger.error(new Error("Test Code").stack);
+            const simc = this.getController(SimulatedPlayerController);
+            const llc = this.getController(LLFakePlayerController);
+            const clic = this.getController(WebSocketController);
+            if (simc) simc.add("SimulatedPlayer");
+            if (llc) llc.add("LLFakePlayer");
+            if (clic) clic.add("ClientFakePlayer");
+        }
     }
     /** 添加假人控制器
      * @param {ControllerBase} controller 假人控制器
